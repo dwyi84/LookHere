@@ -50,21 +50,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        let visualPublishers: [AnyPublisher<Void, Never>] = [
-            settings.$ringColor.map { _ in () }.eraseToAnyPublisher(),
-            settings.$ringRadius.map { _ in () }.eraseToAnyPublisher(),
-            settings.$ringOpacity.map { _ in () }.eraseToAnyPublisher(),
-            settings.$ringLineWidth.map { _ in () }.eraseToAnyPublisher(),
-            settings.$trailEnabled.map { _ in () }.eraseToAnyPublisher(),
-            settings.$trailDuration.map { _ in () }.eraseToAnyPublisher(),
-        ]
-        for publisher in visualPublishers {
-            publisher
-                .sink { [weak self] _ in
-                    self?.overlayController.updateVisuals()
-                }
-                .store(in: &cancellables)
-        }
+        // Each sink passes the freshly-emitted value straight through.
+        // Reading a just-mutated @Published property inside a sink returns the
+        // previous value (the setter notifies before updating storage), which
+        // is what caused colors to apply one tap behind.
+        settings.$ringColor
+            .sink { [weak self] color in
+                self?.overlayController.updateVisuals(color: color)
+            }
+            .store(in: &cancellables)
+        settings.$ringRadius
+            .sink { [weak self] radius in
+                self?.overlayController.updateVisuals(radius: CGFloat(radius))
+            }
+            .store(in: &cancellables)
+        settings.$ringOpacity
+            .sink { [weak self] opacity in
+                self?.overlayController.updateVisuals(opacity: opacity)
+            }
+            .store(in: &cancellables)
+        settings.$ringLineWidth
+            .sink { [weak self] lineWidth in
+                self?.overlayController.updateVisuals(lineWidth: CGFloat(lineWidth))
+            }
+            .store(in: &cancellables)
+        settings.$trailEnabled
+            .sink { [weak self] enabled in
+                self?.overlayController.updateVisuals(trailEnabled: enabled)
+            }
+            .store(in: &cancellables)
+        settings.$trailDuration
+            .sink { [weak self] duration in
+                self?.overlayController.updateVisuals(trailDuration: duration)
+            }
+            .store(in: &cancellables)
 
         NotificationCenter.default.addObserver(
             self,

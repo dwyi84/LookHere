@@ -28,16 +28,33 @@ final class OverlayController {
             ?? 0
     }
 
-    func updateVisuals() {
-        let color = settings.effectiveColor
+    /// Applies visual settings to every overlay window. Passed values take
+    /// precedence over the store's current values, so callers can hand the
+    /// freshly-emitted value straight through (reading a just-mutated
+    /// `@Published` property inside a sink returns the previous value).
+    func updateVisuals(
+        color: NSColor? = nil,
+        radius: CGFloat? = nil,
+        opacity: Double? = nil,
+        lineWidth: CGFloat? = nil,
+        trailEnabled: Bool? = nil,
+        trailDuration: Double? = nil
+    ) {
+        let resolvedColor = color ?? settings.effectiveColor
+        let resolvedRadius = radius ?? CGFloat(settings.ringRadius)
+        let resolvedOpacity = opacity ?? settings.ringOpacity
+        let resolvedWidth = lineWidth ?? CGFloat(settings.ringLineWidth)
+        let resolvedTrail = trailEnabled ?? settings.trailEnabled
+        let resolvedDuration = trailDuration ?? settings.trailDuration
+
         for window in windows {
             window.haloView.configureRing(
-                color: color,
-                radius: CGFloat(settings.ringRadius),
-                opacity: settings.ringOpacity,
-                lineWidth: CGFloat(settings.ringLineWidth),
-                trailEnabled: settings.trailEnabled,
-                trailDuration: settings.trailDuration
+                color: resolvedColor,
+                radius: resolvedRadius,
+                opacity: resolvedOpacity,
+                lineWidth: resolvedWidth,
+                trailEnabled: resolvedTrail,
+                trailDuration: resolvedDuration
             )
         }
     }
