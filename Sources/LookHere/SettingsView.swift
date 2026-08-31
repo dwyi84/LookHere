@@ -125,12 +125,15 @@ struct SettingsView: View {
     // MARK: - Highlight
 
     private func switchRow(_ title: String, isOn: Binding<Bool>) -> some View {
-        Toggle(isOn: isOn) {
+        HStack {
             Text(title)
                 .font(.system(size: 14, weight: .semibold))
+            Spacer()
+            Toggle("", isOn: isOn)
+                .toggleStyle(.switch)
+                .labelsHidden()
+                .accessibilityLabel(title)
         }
-        .toggleStyle(.switch)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var highlightSection: some View {
