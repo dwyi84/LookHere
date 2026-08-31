@@ -124,10 +124,18 @@ struct SettingsView: View {
 
     // MARK: - Highlight
 
+    private func switchRow(_ title: String, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            Text(title)
+                .font(.system(size: 14, weight: .semibold))
+        }
+        .toggleStyle(.switch)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private var highlightSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Toggle("Enable Highlight", isOn: $settings.isEnabled)
-                .toggleStyle(.switch)
+            switchRow("Enable Highlight", isOn: $settings.isEnabled)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("Ring Color")
@@ -201,8 +209,7 @@ struct SettingsView: View {
 
     private var trailSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Toggle("Laser Trail", isOn: $settings.trailEnabled)
-                .toggleStyle(.switch)
+            switchRow("Laser Trail", isOn: $settings.trailEnabled)
 
             sliderRow(title: "Trail Duration", value: $settings.trailDuration, range: 0.5...5.0, step: 0.5) {
                 String(format: "%.1fs", $0)
@@ -214,8 +221,7 @@ struct SettingsView: View {
 
     private var hotkeySection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Toggle("Global Hotkey", isOn: $settings.hotkeyEnabled)
-                .toggleStyle(.switch)
+            switchRow("Global Hotkey", isOn: $settings.hotkeyEnabled)
 
             HStack {
                 Text("Toggle Highlight")
