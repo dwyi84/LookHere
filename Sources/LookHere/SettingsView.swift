@@ -7,12 +7,15 @@ struct SettingsView: View {
     @State private var accessibilityGranted = AccessibilityHelper.isTrusted()
     @State private var showResetConfirm = false
     @State private var updateState: UpdateState = .idle
+    @State private var pendingUpdate: ReleaseInfo?
+    @State private var showUpdateConfirm = false
 
     private enum UpdateState: Equatable {
         case idle
         case checking
+        case downloading
         case upToDate
-        case updateAvailable(String)
+        case updateAvailable
         case failed
     }
 
@@ -40,7 +43,6 @@ struct SettingsView: View {
                 highlightSection
                 trailSection
                 hotkeySection
-                updateSection
                 accessibilitySection
             }
             .padding(16)
@@ -65,6 +67,18 @@ struct SettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .confirmationDialog(
+            "Update to v\(pendingUpdate?.version ?? "")?",
+            isPresented: $showUpdateConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Update Now") {
+                confirmAndInstall()
+            }
+            Button("Cancel", role: .cancel) {
+                updateState = .idle
+            }
+        }
     }
 
     // MARK: - Header
@@ -80,9 +94,32 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
+            Button(action: checkForUpdates) {
+                HStack(spacing: 6) {
+                    Text(updateButtonTitle)
+                    if updateState == .checking || updateState == .downloading {
+                        ProgressView()
+                            .controlSize(.mini)
+                    }
+                }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .disabled(updateState == .checking || updateState == .downloading)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+
+    private var updateButtonTitle: String {
+        switch updateState {
+        case .idle: return "Check for Updates"
+        case .checking: return "Checking…"
+        case .downloading: return "Downloading…"
+        case .updateAvailable: return "Update Available"
+        case .upToDate: return "Up to Date"
+        case .failed: return "Check Again"
+        }
     }
 
     // MARK: - Highlight
@@ -208,58 +245,44 @@ struct SettingsView: View {
 
     // MARK: - Updates
 
-    private var updateSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button(action: checkForUpdates) {
-                HStack(spacing: 8) {
-                    Text("Check for Updates")
-                    if updateState == .checking {
-                        ProgressView()
-                            .controlSize(.mini)
-                    }
-                }
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .disabled(updateState == .checking)
-
-            updateStatusText
-        }
-    }
-
-    @ViewBuilder
-    private var updateStatusText: some View {
-        switch updateState {
-        case .idle, .checking:
-            Text("Current version: v\(UpdateChecker.currentVersion)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        case .upToDate:
-            Text("You're up to date (v\(UpdateChecker.currentVersion)).")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        case .updateAvailable(let version):
-            Text("v\(version) is available — opening download page…")
-                .font(.caption)
-                .foregroundStyle(.green)
-        case .failed:
-            Text("Couldn't check for updates.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
     private func checkForUpdates() {
         updateState = .checking
         Task {
             if let release = await UpdateChecker.checkForUpdates() {
-                if UpdateChecker.isNewer(release.latestVersion) {
-                    updateState = .updateAvailable(release.latestVersion)
-                    NSWorkspace.shared.open(release.htmlURL)
+                if UpdateChecker.isNewer(release.version) {
+                    pendingUpdate = release
+                    updateState = .updateAvailable
+                    showUpdateConfirm = true
                 } else {
                     updateState = .upToDate
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        if self.updateState == .upToDate {
+                            self.updateState = .idle
+                        }
+                    }
                 }
             } else {
+                updateState = .failed
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    if self.updateState == .failed {
+                        self.updateState = .idle
+                    }
+                }
+            }
+        }
+    }
+
+    private func confirmAndInstall() {
+        guard let release = pendingUpdate, let assetURL = release.assetURL else {
+            updateState = .failed
+            return
+        }
+        updateState = .downloading
+        Task {
+            do {
+                let zipURL = try await UpdateChecker.downloadAsset(from: assetURL)
+                UpdateChecker.installAndRelaunch(zipURL: zipURL)
+            } catch {
                 updateState = .failed
             }
         }

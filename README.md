@@ -15,7 +15,7 @@ A featherweight **macOS menu bar utility** that draws a smooth, zero-lag **halo 
 - **Zero-Lag Halo** — a crisp circular ring that follows your cursor at full display refresh rate (powered by a `CGEvent` tap running on the main run loop; no polling, no latency).
 - **Click Ripple Feedback** — subtle expanding ripples animate on every left / right / middle click so your audience always sees where you clicked.
 - **Laser Trail Mode** — optionally leave a smooth, tapering neon laser trail behind the cursor (0.5–5s) that thins and fades out, perfect for laser-pointer-style highlighting.
-- **Built-in Update Checker** — a "Check for Updates" button queries the GitHub Releases API and opens the download page when a newer version is out.
+- **One-Click Auto-Update** — "Check for Updates" queries the GitHub Releases API, and when a newer version is found it downloads, replaces the running app in place, and relaunches — all from one click.
 - **Click-Through Overlay** — fully transparent, borderless, and set to `ignoresMouseEvents`, so it never blocks a single click.
 - **Runs Above Everything** — stays on top of every window, full-screen app, and every Space.
 - **Menu Bar Settings (SwiftUI)** — toggle highlight on/off, pick from preset ring colors, and tune radius, opacity, and line thickness — all applied **live** with a built-in preview.
@@ -70,7 +70,7 @@ cd LookHere
 - **Thickness** — ring stroke width.
 - **Laser Trail** — toggle a smooth tapering neon laser trail and set how long it lasts (0.5–5s).
 - **Global Hotkey** — toggle the shortcut, or click the hotkey button to record a new one.
-- **Check for Updates** — query the GitHub Releases API and jump to the download page when a newer version is available.
+- **Check for Updates** — the header shows the current version with a button that downloads and installs newer releases in one click.
 - **Accessibility Permission** — current status plus a shortcut to System Settings.
 - **Reset** — restore all settings to their defaults.
 

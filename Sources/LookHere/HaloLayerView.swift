@@ -12,6 +12,7 @@ final class HaloLayerView: NSView {
     private var ringColorValue: NSColor = .systemOrange
     private var trailEnabled = false
     private var trailDuration: Double = 2.0
+    private var prevTrailPoint: CGPoint?
     private var lastTrailPoint: CGPoint?
 
     override init(frame frameRect: NSRect) {
@@ -34,23 +35,21 @@ final class HaloLayerView: NSView {
 
     func showRing(at point: CGPoint) {
         if trailEnabled {
-            if let last = lastTrailPoint {
-                let distance = hypot(point.x - last.x, point.y - last.y)
-                if distance > 1 {
-                    spawnTrailSegment(from: last, to: point)
-                }
-            }
-            lastTrailPoint = point
+            appendTrailPoint(point)
         }
-        ringLayer.isHidden = false
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        ringLayer.isHidden = false
         ringLayer.position = point
         CATransaction.commit()
     }
 
     func hideRing() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         ringLayer.isHidden = true
+        CATransaction.commit()
+        prevTrailPoint = nil
         lastTrailPoint = nil
     }
 
@@ -78,6 +77,8 @@ final class HaloLayerView: NSView {
         ringLayer.bounds = rect
         ringLayer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         CATransaction.commit()
+
+        recolorTrail(with: color)
     }
 
     func spawnRipple(at point: CGPoint, color: NSColor, lineWidth: CGFloat, maxRadius: CGFloat) {
@@ -88,13 +89,17 @@ final class HaloLayerView: NSView {
         let ripple = CAShapeLayer()
         let startRadius: CGFloat = 6
         let rect = CGRect(origin: .zero, size: CGSize(width: startRadius * 2, height: startRadius * 2))
+        ripple.fillColor = NSColor.clear.cgColor
+        ripple.strokeColor = color.cgColor
+        ripple.lineWidth = max(lineWidth, 2)
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         ripple.path = CGPath(ellipseIn: rect, transform: nil)
         ripple.bounds = rect
         ripple.position = point
         ripple.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        ripple.fillColor = NSColor.clear.cgColor
-        ripple.strokeColor = color.cgColor
-        ripple.lineWidth = max(lineWidth, 2)
+        CATransaction.commit()
 
         layer?.addSublayer(ripple)
         ripples.append(ripple)
@@ -135,10 +140,30 @@ final class HaloLayerView: NSView {
         trailSegments.forEach { $0.removeAll() }
         trailSegments.removeAll()
         stopTrailTimer()
+        prevTrailPoint = nil
         lastTrailPoint = nil
     }
 
-    // MARK: - Trail (continuous polyline)
+    // MARK: - Trail (smooth continuous polyline)
+
+    private func midpoint(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
+        CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
+    }
+
+    private func appendTrailPoint(_ point: CGPoint) {
+        guard let last = lastTrailPoint else {
+            lastTrailPoint = point
+            return
+        }
+        let distance = hypot(point.x - last.x, point.y - last.y)
+        guard distance >= 3 else { return }
+
+        if let prev = prevTrailPoint {
+            spawnTrailSegment(from: midpoint(prev, last), to: midpoint(last, point))
+        }
+        prevTrailPoint = last
+        lastTrailPoint = point
+    }
 
     private func spawnTrailSegment(from: CGPoint, to: CGPoint) {
         if trailSegments.count >= 300 {
@@ -158,25 +183,29 @@ final class HaloLayerView: NSView {
         path.addLine(to: CGPoint(x: to.x - minX, y: to.y - minY))
 
         let core = CAShapeLayer()
-        core.path = path
-        core.bounds = bounds
-        core.position = CGPoint(x: minX + w / 2, y: minY + h / 2)
-        core.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         core.fillColor = NSColor.clear.cgColor
         core.strokeColor = ringColorValue.cgColor
         core.lineWidth = baseWidth
         core.lineCap = .round
 
         let glow = CAShapeLayer()
-        glow.path = path
-        glow.bounds = bounds
-        glow.position = core.position
-        glow.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         glow.fillColor = NSColor.clear.cgColor
         glow.strokeColor = ringColorValue.cgColor
         glow.lineWidth = baseWidth * 2.4
         glow.lineCap = .round
         glow.opacity = 0.35
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        core.path = path
+        core.bounds = bounds
+        core.position = CGPoint(x: minX + w / 2, y: minY + h / 2)
+        core.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        glow.path = path
+        glow.bounds = bounds
+        glow.position = core.position
+        glow.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        CATransaction.commit()
 
         layer?.addSublayer(glow)
         layer?.addSublayer(core)
@@ -184,6 +213,16 @@ final class HaloLayerView: NSView {
             TrailSegment(core: core, glow: glow, birthTime: CACurrentMediaTime(), baseWidth: baseWidth)
         )
         startTrailTimer()
+    }
+
+    private func recolorTrail(with color: NSColor) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for segment in trailSegments {
+            segment.core.strokeColor = color.cgColor
+            segment.glow.strokeColor = color.cgColor
+        }
+        CATransaction.commit()
     }
 
     private func startTrailTimer() {
