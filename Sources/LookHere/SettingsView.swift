@@ -1,0 +1,379 @@
+import AppKit
+import SwiftUI
+
+struct SettingsView: View {
+    @ObservedObject var settings: SettingsStore
+    @StateObject private var hotkeyRecorder = HotkeyRecorder()
+    @State private var accessibilityGranted = AccessibilityHelper.isTrusted()
+    @State private var showResetConfirm = false
+    @State private var updateState: UpdateState = .idle
+
+    private enum UpdateState: Equatable {
+        case idle
+        case checking
+        case upToDate
+        case updateAvailable(String)
+        case failed
+    }
+
+    private let coffeeURL = URL(string: "https://buymeacoffee.com/dwyi84d")!
+
+    private let presetColors: [NSColor] = [
+        NSColor(red: 1.0, green: 0.584, blue: 0.0, alpha: 1),       // orange
+        NSColor(red: 0.918, green: 0.231, blue: 0.188, alpha: 1),   // red
+        NSColor(red: 1.0, green: 0.177, blue: 0.333, alpha: 1),     // pink
+        NSColor(red: 0.686, green: 0.322, blue: 0.871, alpha: 1),   // purple
+        NSColor(red: 0.0, green: 0.478, blue: 1.0, alpha: 1),       // blue
+        NSColor(red: 0.353, green: 0.784, blue: 0.98, alpha: 1),    // cyan
+        NSColor(red: 0.188, green: 0.663, blue: 0.639, alpha: 1),   // teal
+        NSColor(red: 0.208, green: 0.788, blue: 0.349, alpha: 1),   // green
+        NSColor(red: 1.0, green: 0.843, blue: 0.0, alpha: 1),       // yellow
+        NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1),         // white
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+            Divider()
+
+            VStack(alignment: .leading, spacing: 18) {
+                highlightSection
+                trailSection
+                hotkeySection
+                updateSection
+                accessibilitySection
+            }
+            .padding(16)
+
+            Divider()
+            footer
+        }
+        .frame(width: 300)
+        .onAppear {
+            accessibilityGranted = AccessibilityHelper.isTrusted()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .accessibilityStatusChanged)) { _ in
+            accessibilityGranted = AccessibilityHelper.isTrusted()
+        }
+        .confirmationDialog(
+            "Reset all settings to defaults?",
+            isPresented: $showResetConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Reset", role: .destructive) {
+                settings.resetSettings()
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack {
+            Circle()
+                .stroke(Color(nsColor: settings.ringColor), lineWidth: 2.5)
+                .frame(width: 18, height: 18)
+            Text("LookHere")
+                .font(.headline)
+            Text("v\(UpdateChecker.currentVersion)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    // MARK: - Highlight
+
+    private var highlightSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("Enable Highlight", isOn: $settings.isEnabled)
+                .toggleStyle(.switch)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Ring Color")
+                    .font(.subheadline.weight(.medium))
+                colorSwatches
+            }
+
+            sliderRow(title: "Radius", value: $settings.ringRadius, range: 12...60, step: 1) {
+                "\(Int($0.rounded())) pt"
+            }
+            sliderRow(title: "Opacity", value: $settings.ringOpacity, range: 0.15...1.0, step: 0.05) {
+                "\(Int(($0 * 100).rounded()))%"
+            }
+            sliderRow(title: "Thickness", value: $settings.ringLineWidth, range: 1...8, step: 0.5) {
+                String(format: "%.1f pt", $0)
+            }
+        }
+    }
+
+    private var colorSwatches: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+            ForEach(presetColors, id: \.self) { color in
+                let isSelected = isSameColor(settings.ringColor, color)
+                Button {
+                    settings.ringColor = color
+                } label: {
+                    Circle()
+                        .fill(Color(nsColor: color))
+                        .overlay(
+                            Circle()
+                                .strokeBorder(
+                                    isSelected ? Color.accentColor : Color.gray.opacity(0.2),
+                                    lineWidth: isSelected ? 2 : 1
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+                .frame(width: 30, height: 30)
+            }
+        }
+    }
+
+    private func isSameColor(_ a: NSColor, _ b: NSColor) -> Bool {
+        let a = a.usingColorSpace(NSColorSpace.deviceRGB) ?? a
+        let b = b.usingColorSpace(NSColorSpace.deviceRGB) ?? b
+        return abs(a.redComponent - b.redComponent) < 0.01
+            && abs(a.greenComponent - b.greenComponent) < 0.01
+            && abs(a.blueComponent - b.blueComponent) < 0.01
+    }
+
+    private func sliderRow(
+        title: String,
+        value: Binding<Double>,
+        range: ClosedRange<Double>,
+        step: Double,
+        display: @escaping (Double) -> String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text(display(value.wrappedValue))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            Slider(value: value, in: range, step: step)
+        }
+    }
+
+    // MARK: - Trail
+
+    private var trailSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle("Laser Trail", isOn: $settings.trailEnabled)
+                .toggleStyle(.switch)
+
+            sliderRow(title: "Trail Duration", value: $settings.trailDuration, range: 0.5...5.0, step: 0.5) {
+                String(format: "%.1fs", $0)
+            }
+        }
+    }
+
+    // MARK: - Hotkey
+
+    private var hotkeySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle("Global Hotkey", isOn: $settings.hotkeyEnabled)
+                .toggleStyle(.switch)
+
+            HStack {
+                Text("Toggle Highlight")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button(action: hotkeyRecorder.isRecording ? {} : startRecording) {
+                    Text(hotkeyRecorder.isRecording ? "Press keys…" : settings.hotkeyDisplayString)
+                        .font(.caption.monospaced())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(hotkeyRecorder.isRecording ? Color.accentColor.opacity(0.25) : Color.gray.opacity(0.15))
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(!settings.hotkeyEnabled)
+            }
+        }
+    }
+
+    private func startRecording() {
+        hotkeyRecorder.begin(store: settings) { [weak hotkeyRecorder] in
+            hotkeyRecorder?.finish()
+        }
+    }
+
+    // MARK: - Updates
+
+    private var updateSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(action: checkForUpdates) {
+                HStack(spacing: 8) {
+                    Text("Check for Updates")
+                    if updateState == .checking {
+                        ProgressView()
+                            .controlSize(.mini)
+                    }
+                }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .disabled(updateState == .checking)
+
+            updateStatusText
+        }
+    }
+
+    @ViewBuilder
+    private var updateStatusText: some View {
+        switch updateState {
+        case .idle, .checking:
+            Text("Current version: v\(UpdateChecker.currentVersion)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .upToDate:
+            Text("You're up to date (v\(UpdateChecker.currentVersion)).")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .updateAvailable(let version):
+            Text("v\(version) is available — opening download page…")
+                .font(.caption)
+                .foregroundStyle(.green)
+        case .failed:
+            Text("Couldn't check for updates.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func checkForUpdates() {
+        updateState = .checking
+        Task {
+            if let release = await UpdateChecker.checkForUpdates() {
+                if UpdateChecker.isNewer(release.latestVersion) {
+                    updateState = .updateAvailable(release.latestVersion)
+                    NSWorkspace.shared.open(release.htmlURL)
+                } else {
+                    updateState = .upToDate
+                }
+            } else {
+                updateState = .failed
+            }
+        }
+    }
+
+    // MARK: - Accessibility
+
+    private var accessibilitySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Accessibility Permission")
+                .font(.subheadline.weight(.medium))
+
+            HStack(spacing: 6) {
+                Image(systemName: accessibilityGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .foregroundStyle(accessibilityGranted ? Color.green : Color.orange)
+                Text(accessibilityGranted
+                     ? "Granted — cursor tracking active."
+                     : "Required to track the cursor globally.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if !accessibilityGranted {
+                Button("Open System Settings…") {
+                    AccessibilityHelper.openSystemSettings()
+                }
+                .controlSize(.small)
+            }
+        }
+    }
+
+    // MARK: - Footer
+
+    private var footer: some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 8) {
+                Link(destination: coffeeURL) {
+                    HStack(spacing: 6) {
+                        Text("☕")
+                        Text("Buy me a coffee")
+                            .font(.callout.weight(.medium))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(red: 1.0, green: 0.87, blue: 0.0))
+                    )
+                    .foregroundStyle(.black)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Button("Reset") {
+                    showResetConfirm = true
+                }
+                .controlSize(.small)
+                .help("Reset all settings to defaults")
+
+                Button("Quit") {
+                    NSApp.terminate(nil)
+                }
+                .controlSize(.small)
+            }
+
+            Text("Crafted by MelissaSoft")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+}
+
+@MainActor
+final class HotkeyRecorder: ObservableObject {
+    @Published var isRecording = false
+
+    private var monitor: Any?
+    private var onComplete: (() -> Void)?
+
+    func begin(store: SettingsStore, onComplete: @escaping () -> Void) {
+        guard monitor == nil else { return }
+        self.onComplete = onComplete
+        isRecording = true
+
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self else { return event }
+
+            if event.keyCode == 53 {
+                self.finish()
+                return nil
+            }
+
+            guard let combo = store.applyHotkey(from: event) else {
+                return nil
+            }
+
+            store.hotkeyKeyCode = combo.keyCode
+            store.hotkeyCarbonModifiers = combo.carbonModifiers
+            self.finish()
+            return nil
+        }
+    }
+
+    func finish() {
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        monitor = nil
+        isRecording = false
+        let completion = onComplete
+        onComplete = nil
+        completion?()
+    }
+}
