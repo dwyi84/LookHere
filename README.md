@@ -1,4 +1,3 @@
-<img width="372" height="720" alt="lookhere" src="https://github.com/user-attachments/assets/26710ffd-9200-479b-a704-3999a89fcbe3" />
 # LookHere
 
 A featherweight **macOS menu bar utility** that draws a smooth, zero-lag **halo ring** around your mouse cursor — perfect for presentations, screen recordings, teaching, and live coding.
@@ -10,6 +9,8 @@ A featherweight **macOS menu bar utility** that draws a smooth, zero-lag **halo 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-dwyi84d-FFDD00?logo=buymeacoffee&logoColor=black&style=flat-square)](https://buymeacoffee.com/dwyi84d)
 
 ---
+
+<img width="372" height="720" alt="lookhere" src="https://github.com/user-attachments/assets/26710ffd-9200-479b-a704-3999a89fcbe3" />
 
 ## Features
 
