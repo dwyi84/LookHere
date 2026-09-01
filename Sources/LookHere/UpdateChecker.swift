@@ -10,7 +10,7 @@ struct ReleaseInfo {
 enum UpdateChecker {
     static let repoOwner = "dwyi84"
     static let repoName = "LookHere"
-    static let currentVersion = "1.2.2"
+    static let currentVersion = "1.3.0"
 
     static let apiURL = URL(
         string: "https://api.github.com/repos/\(repoOwner)/\(repoName)/releases/latest"
@@ -38,7 +38,8 @@ enum UpdateChecker {
                 .compactMap { $0["browser_download_url"] as? String }
                 .compactMap(URL.init(string:))
                 .first { $0.pathExtension == "zip" }
-            return ReleaseInfo(version: tag, htmlURL: url, assetURL: assetURL)
+            let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+            return ReleaseInfo(version: version, htmlURL: url, assetURL: assetURL)
         } catch {
             return nil
         }

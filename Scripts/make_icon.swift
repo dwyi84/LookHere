@@ -16,7 +16,7 @@ func drawIcon(in rect: NSRect) {
     gradient.draw(in: backgroundPath, angle: -90)
 
     let center = NSPoint(x: rect.midX, y: rect.midY)
-    let ringRadius = s * 0.30
+    let ringRadius = s * 0.315
     let ringRect = NSRect(
         x: center.x - ringRadius,
         y: center.y - ringRadius,
@@ -32,20 +32,45 @@ func drawIcon(in rect: NSRect) {
     NSGraphicsContext.current?.saveGraphicsState()
     shadow.set()
     let ring = NSBezierPath(ovalIn: ringRect)
-    ring.lineWidth = s * 0.10
+    ring.lineWidth = s * 0.085
     NSColor.white.setStroke()
     ring.stroke()
     NSGraphicsContext.current?.restoreGraphicsState()
 
-    let dotRadius = s * 0.08
-    let dotRect = NSRect(
-        x: center.x - dotRadius,
-        y: center.y - dotRadius,
-        width: dotRadius * 2,
-        height: dotRadius * 2
+    let arrowNorm: [(x: CGFloat, y: CGFloat)] = [
+        (0.000, 0.000),
+        (0.000, 0.900),
+        (0.350, 0.692),
+        (0.563, 1.000),
+        (0.788, 0.938),
+        (0.575, 0.638),
+        (1.000, 0.638),
+    ]
+    let arrowHeight = s * 0.36
+    let arrowWidth = arrowHeight * 8.0 / 13.0
+    let arrowOrigin = NSPoint(
+        x: center.x - arrowWidth / 2 + s * 0.012,
+        y: center.y - arrowHeight / 2 - s * 0.012
     )
+    let arrow = NSBezierPath()
+    for (i, p) in arrowNorm.enumerated() {
+        let pt = NSPoint(
+            x: arrowOrigin.x + p.x * arrowWidth,
+            y: arrowOrigin.y + (1 - p.y) * arrowHeight
+        )
+        if i == 0 { arrow.move(to: pt) } else { arrow.line(to: pt) }
+    }
+    arrow.close()
+
+    NSGraphicsContext.current?.saveGraphicsState()
+    shadow.set()
     NSColor.white.setFill()
-    NSBezierPath(ovalIn: dotRect).fill()
+    arrow.fill()
+    NSGraphicsContext.current?.restoreGraphicsState()
+
+    arrow.lineWidth = s * 0.016
+    NSColor.black.withAlphaComponent(0.45).setStroke()
+    arrow.stroke()
 }
 
 func makeIcon(pixelSize: Int) -> NSBitmapImageRep {

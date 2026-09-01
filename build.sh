@@ -74,7 +74,14 @@ ensure_signing_identity() {
         -T /usr/bin/codesign -T /usr/bin/security >/dev/null 2>&1
     security set-key-partition-list -S apple-tool:,apple:,codesign: \
         -s -k "$KEYCHAIN_PASS" "$KEYCHAIN" >/dev/null 2>&1 || true
-    security list-keychains -d user -s "$KEYCHAIN" "$HOME/Library/Keychains/login.keychain-db"
+    # Append (not replace) so builds of other projects don't drop this entry,
+    # and vice versa.
+    local kcs="$KEYCHAIN"
+    while IFS= read -r kc; do
+        kc="${kc//\"/}"
+        [ -n "$kc" ] && [ "$kc" != "$KEYCHAIN" ] && kcs+=" $kc"
+    done < <(security list-keychains -d user)
+    security list-keychains -d user -s $kcs
 
     rm -f "$p12"
     set_user_trust
