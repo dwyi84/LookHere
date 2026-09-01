@@ -103,9 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         guard let button = statusItem.button else { return }
 
-        let icon = NSImage(systemSymbolName: "circle.circle", accessibilityDescription: "LookHere")
-        icon?.isTemplate = true
-        button.image = icon
+        button.image = MenuBarIcon.make()
 
         button.target = self
         button.action = #selector(statusItemClicked(_:))
