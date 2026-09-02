@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Carbon.HIToolbox
+import ServiceManagement
 
 @MainActor
 final class SettingsStore: ObservableObject {
@@ -46,6 +47,11 @@ final class SettingsStore: ObservableObject {
         didSet { defaults.set(trailDuration, forKey: Keys.trailDuration) }
     }
 
+    // Persisted by SMAppService itself — never stored in UserDefaults.
+    @Published var launchAtLogin: Bool {
+        didSet { applyLaunchAtLogin(launchAtLogin) }
+    }
+
     var effectiveColor: NSColor {
         ringColor.usingColorSpace(NSColorSpace.deviceRGB) ?? ringColor
     }
@@ -62,6 +68,8 @@ final class SettingsStore: ObservableObject {
         hotkeyCarbonModifiers = UInt32(storedMods == 0 ? Int(cmdKey | shiftKey) : storedMods)
         trailEnabled = defaults.object(forKey: Keys.trailEnabled) as? Bool ?? false
         trailDuration = defaults.object(forKey: Keys.trailDuration) as? Double ?? 2.0
+        let launchStatus = SMAppService.mainApp.status
+        launchAtLogin = launchStatus == .enabled || launchStatus == .requiresApproval
 
         let red = defaults.double(forKey: Keys.red)
         let green = defaults.double(forKey: Keys.green)
@@ -88,6 +96,38 @@ final class SettingsStore: ObservableObject {
         hotkeyCarbonModifiers = UInt32(cmdKey | shiftKey)
         trailEnabled = false
         trailDuration = 2.0
+        launchAtLogin = false
+    }
+
+    // MARK: - Launch at Login
+
+    /// True when the app is registered as a login item (or awaiting the
+    /// user's approval in System Settings).
+    var isRegisteredForLaunch: Bool {
+        let status = SMAppService.mainApp.status
+        return status == .enabled || status == .requiresApproval
+    }
+
+    private func applyLaunchAtLogin(_ enabled: Bool) {
+        let service = SMAppService.mainApp
+        guard enabled != isRegisteredForLaunch else { return }
+        if enabled {
+            try? service.register()
+            if service.status == .requiresApproval {
+                SMAppService.openSystemSettingsLoginItems()
+            }
+        } else {
+            try? service.unregister()
+        }
+    }
+
+    /// Re-reads the real system state (e.g. after the user toggled the login
+    /// item in System Settings directly).
+    func syncLaunchAtLogin() {
+        let registered = isRegisteredForLaunch
+        if launchAtLogin != registered {
+            launchAtLogin = registered
+        }
     }
 
     private func persistColor() {

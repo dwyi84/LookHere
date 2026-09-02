@@ -10,7 +10,7 @@ struct ReleaseInfo {
 enum UpdateChecker {
     static let repoOwner = "dwyi84"
     static let repoName = "LookHere"
-    static let currentVersion = "1.3.2"
+    static let currentVersion = "1.4.0"
 
     static let apiURL = URL(
         string: "https://api.github.com/repos/\(repoOwner)/\(repoName)/releases/latest"

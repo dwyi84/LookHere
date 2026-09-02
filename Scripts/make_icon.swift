@@ -1,41 +1,23 @@
 import AppKit
 import Foundation
 
+// Mirrors the settings header mark: a colored ring with a black
+// macOS-style cursor inside, on a transparent background.
 func drawIcon(in rect: NSRect) {
     let s = rect.size.width
 
-    let backgroundPath = NSBezierPath(
-        roundedRect: rect,
-        xRadius: s * 0.2237,
-        yRadius: s * 0.2237
-    )
-    let gradient = NSGradient(colors: [
-        NSColor(calibratedRed: 1.0, green: 0.62, blue: 0.24, alpha: 1.0),
-        NSColor(calibratedRed: 0.95, green: 0.42, blue: 0.07, alpha: 1.0),
-    ])!
-    gradient.draw(in: backgroundPath, angle: -90)
-
     let center = NSPoint(x: rect.midX, y: rect.midY)
-    let ringRadius = s * 0.315
+    let ringRadius = s * 0.36
     let ringRect = NSRect(
         x: center.x - ringRadius,
         y: center.y - ringRadius,
         width: ringRadius * 2,
         height: ringRadius * 2
     )
-
-    let shadow = NSShadow()
-    shadow.shadowColor = NSColor.black.withAlphaComponent(0.25)
-    shadow.shadowBlurRadius = s * 0.03
-    shadow.shadowOffset = NSSize(width: 0, height: -s * 0.015)
-
-    NSGraphicsContext.current?.saveGraphicsState()
-    shadow.set()
     let ring = NSBezierPath(ovalIn: ringRect)
-    ring.lineWidth = s * 0.085
-    NSColor.white.setStroke()
+    ring.lineWidth = s * 0.10
+    NSColor(calibratedRed: 1.0, green: 0.584, blue: 0.0, alpha: 1.0).setStroke()
     ring.stroke()
-    NSGraphicsContext.current?.restoreGraphicsState()
 
     let arrowNorm: [(x: CGFloat, y: CGFloat)] = [
         (0.000, 0.000),
@@ -46,11 +28,11 @@ func drawIcon(in rect: NSRect) {
         (0.575, 0.638),
         (1.000, 0.638),
     ]
-    let arrowHeight = s * 0.36
+    let arrowHeight = s * 0.48
     let arrowWidth = arrowHeight * 8.0 / 13.0
     let arrowOrigin = NSPoint(
-        x: center.x - arrowWidth / 2 + s * 0.012,
-        y: center.y - arrowHeight / 2 - s * 0.012
+        x: center.x - arrowWidth / 2 + s * 0.02,
+        y: center.y - arrowHeight / 2 - s * 0.02
     )
     let arrow = NSBezierPath()
     for (i, p) in arrowNorm.enumerated() {
@@ -62,14 +44,10 @@ func drawIcon(in rect: NSRect) {
     }
     arrow.close()
 
-    NSGraphicsContext.current?.saveGraphicsState()
-    shadow.set()
-    NSColor.white.setFill()
+    NSColor.black.setFill()
     arrow.fill()
-    NSGraphicsContext.current?.restoreGraphicsState()
-
-    arrow.lineWidth = s * 0.016
-    NSColor.black.withAlphaComponent(0.45).setStroke()
+    arrow.lineWidth = s * 0.04
+    NSColor.white.setStroke()
     arrow.stroke()
 }
 

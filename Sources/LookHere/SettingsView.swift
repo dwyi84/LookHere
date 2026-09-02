@@ -43,6 +43,7 @@ struct SettingsView: View {
                 highlightSection
                 trailSection
                 hotkeySection
+                launchAtLoginSection
                 accessibilitySection
             }
             .padding(16)
@@ -53,6 +54,7 @@ struct SettingsView: View {
         .frame(width: 300)
         .onAppear {
             accessibilityGranted = AccessibilityHelper.isTrusted()
+            settings.syncLaunchAtLogin()
         }
         .onReceive(NotificationCenter.default.publisher(for: .accessibilityStatusChanged)) { _ in
             accessibilityGranted = AccessibilityHelper.isTrusted()
@@ -282,6 +284,12 @@ struct SettingsView: View {
         hotkeyRecorder.begin(store: settings) { [weak hotkeyRecorder] in
             hotkeyRecorder?.finish()
         }
+    }
+
+    // MARK: - Launch at Login
+
+    private var launchAtLoginSection: some View {
+        switchRow("Launch at Login", isOn: $settings.launchAtLogin)
     }
 
     // MARK: - Updates
