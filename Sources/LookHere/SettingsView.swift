@@ -95,6 +95,7 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
             Spacer()
             updateIndicator
+                .frame(height: 20)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
