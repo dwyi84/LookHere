@@ -5,10 +5,12 @@ import Combine
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let settings = SettingsStore()
+    let updateChecker = UpdateChecker()
 
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var rightClickMenu: NSMenu!
+    private var launchAtLoginMenuItem: NSMenuItem!
 
     private var overlayController: OverlayController!
     private var mouseTracker: MouseTracker?
@@ -91,6 +93,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil
         )
+
+        updateChecker.checkForUpdates()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -116,6 +120,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keyEquivalent: ""
         )
         rightClickMenu.addItem(.separator())
+        launchAtLoginMenuItem = rightClickMenu.addItem(
+            withTitle: "Launch at Login",
+            action: #selector(toggleLaunchAtLoginFromMenu),
+            keyEquivalent: ""
+        )
+        rightClickMenu.addItem(
+            withTitle: "Check for Updates",
+            action: #selector(checkForUpdatesFromMenu),
+            keyEquivalent: ""
+        )
+        rightClickMenu.addItem(.separator())
         rightClickMenu.addItem(
             withTitle: "Settings…",
             action: #selector(showSettings),
@@ -132,7 +147,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupPopover() {
         popover = NSPopover()
         popover.behavior = .transient
-        let hosting = NSHostingController(rootView: SettingsView(settings: settings))
+        let hosting = NSHostingController(
+            rootView: SettingsView(settings: settings, updater: updateChecker)
+        )
         popover.contentViewController = hosting
 
         let fitting = hosting.view.fittingSize
@@ -144,6 +161,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func statusItemClicked(_ sender: Any?) {
         guard let event = NSApp.currentEvent else { return }
         if event.type == .rightMouseUp {
+            settings.syncLaunchAtLogin()
+            launchAtLoginMenuItem.state = settings.isRegisteredForLaunch ? .on : .off
             statusItem.menu = rightClickMenu
             statusItem.button?.performClick(nil)
             statusItem.menu = nil
@@ -155,6 +174,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleHighlight() {
         settings.isEnabled.toggle()
         rightClickMenu.item(at: 0)?.title = settings.isEnabled ? "Hide Highlight" : "Show Highlight"
+    }
+
+    @objc private func toggleLaunchAtLoginFromMenu() {
+        settings.launchAtLogin = !settings.isRegisteredForLaunch
+        launchAtLoginMenuItem.state = settings.isRegisteredForLaunch ? .on : .off
+    }
+
+    @objc private func checkForUpdatesFromMenu() {
+        updateChecker.checkForUpdatesPresentingAlert()
     }
 
     @objc private func showSettings() {

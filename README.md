@@ -17,7 +17,7 @@ A featherweight **macOS menu bar utility** that draws a smooth, zero-lag **halo 
 - **Zero-Lag Halo** — a crisp circular ring that follows your cursor at full display refresh rate (powered by a `CGEvent` tap running on the main run loop; no polling, no latency).
 - **Click Ripple Feedback** — subtle expanding ripples animate on every left / right / middle click so your audience always sees where you clicked.
 - **Laser Trail Mode** — optionally leave a smooth, tapering neon laser trail behind the cursor (0.5–5s) that thins and fades out, perfect for laser-pointer-style highlighting.
-- **One-Click Auto-Update** — "Check for Updates" queries the GitHub Releases API, and when a newer version is found it downloads, replaces the running app in place, and relaunches — all from one click.
+- **One-Click Auto-Update** — LookHere checks GitHub Releases silently at launch, and "Check for Updates" (settings header or right-click menu) queries it on demand. When a newer version is found it downloads, replaces the running app in place, and relaunches — all from one click.
 - **Click-Through Overlay** — fully transparent, borderless, and set to `ignoresMouseEvents`, so it never blocks a single click.
 - **Runs Above Everything** — stays on top of every window, full-screen app, and every Space.
 - **Menu Bar Settings (SwiftUI)** — toggle highlight on/off, pick from preset ring colors, and tune radius, opacity, and line thickness — all applied **live** with a built-in preview.
@@ -60,7 +60,7 @@ cd LookHere
 | Left / right / middle click | Ripple animation at the click point |
 | `⇧⌘L` (default) | Toggle highlight on / off |
 | Menu bar icon → Settings | Tweak color, radius, opacity, thickness |
-| Menu bar icon → right-click | Quick toggle / quit |
+| Menu bar icon → right-click | Highlight toggle · Launch at Login · Check for Updates · Settings · Quit |
 
 ## Settings
 
@@ -72,7 +72,7 @@ cd LookHere
 - **Thickness** — ring stroke width.
 - **Laser Trail** — toggle a smooth tapering neon laser trail and set how long it lasts (0.5–5s).
 - **Global Hotkey** — toggle the shortcut, or click the hotkey button to record a new one.
-- **Check for Updates** — the header shows the current version with a button that downloads and installs newer releases in one click.
+- **Check for Updates** — the header shows the current version with a button that downloads and installs newer releases in one click. LookHere also checks silently at every launch and flags updates in the header.
 - **Accessibility Permission** — current status plus a shortcut to System Settings.
 - **Reset** — restore all settings to their defaults.
 

@@ -3,21 +3,10 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var settings: SettingsStore
+    @ObservedObject var updater: UpdateChecker
     @StateObject private var hotkeyRecorder = HotkeyRecorder()
     @State private var accessibilityGranted = AccessibilityHelper.isTrusted()
     @State private var showResetConfirm = false
-    @State private var updateState: UpdateState = .idle
-    @State private var pendingUpdate: ReleaseInfo?
-    @State private var showUpdateConfirm = false
-
-    private enum UpdateState: Equatable {
-        case idle
-        case checking
-        case downloading
-        case upToDate
-        case updateAvailable
-        case failed
-    }
 
     private let coffeeURL = URL(string: "https://buymeacoffee.com/dwyi84d")!
 
@@ -69,18 +58,6 @@ struct SettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        .confirmationDialog(
-            "Update to v\(pendingUpdate?.version ?? "")?",
-            isPresented: $showUpdateConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Update Now") {
-                confirmAndInstall()
-            }
-            Button("Cancel", role: .cancel) {
-                updateState = .idle
-            }
-        }
     }
 
     // MARK: - Header
@@ -116,10 +93,10 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var updateIndicator: some View {
-        switch updateState {
+        switch updater.updateState {
         case .idle:
             Button("Check for Updates") {
-                checkForUpdates()
+                updater.checkForUpdates()
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
@@ -139,16 +116,16 @@ struct SettingsView: View {
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
-        case .updateAvailable:
+        case .available(let release):
             Button("Update Available") {
-                showUpdateConfirm = true
+                updater.presentUpdateConfirmation()
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
-            .help("Update available")
+            .help("Update to v\(release.version)")
         case .failed:
             Button("Check Again") {
-                checkForUpdates()
+                updater.checkForUpdates()
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
@@ -290,51 +267,6 @@ struct SettingsView: View {
 
     private var launchAtLoginSection: some View {
         switchRow("Launch at Login", isOn: $settings.launchAtLogin)
-    }
-
-    // MARK: - Updates
-
-    private func checkForUpdates() {
-        updateState = .checking
-        Task {
-            if let release = await UpdateChecker.checkForUpdates() {
-                if UpdateChecker.isNewer(release.version) {
-                    pendingUpdate = release
-                    updateState = .updateAvailable
-                    showUpdateConfirm = true
-                } else {
-                    updateState = .upToDate
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                        if self.updateState == .upToDate {
-                            self.updateState = .idle
-                        }
-                    }
-                }
-            } else {
-                updateState = .failed
-                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                    if self.updateState == .failed {
-                        self.updateState = .idle
-                    }
-                }
-            }
-        }
-    }
-
-    private func confirmAndInstall() {
-        guard let release = pendingUpdate, let assetURL = release.assetURL else {
-            updateState = .failed
-            return
-        }
-        updateState = .downloading
-        Task {
-            do {
-                let zipURL = try await UpdateChecker.downloadAsset(from: assetURL)
-                UpdateChecker.installAndRelaunch(zipURL: zipURL)
-            } catch {
-                updateState = .failed
-            }
-        }
     }
 
     // MARK: - Accessibility
