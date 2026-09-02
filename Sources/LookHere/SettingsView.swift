@@ -94,31 +94,51 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
-            Button(action: checkForUpdates) {
-                HStack(spacing: 6) {
-                    Text(updateButtonTitle)
-                    if updateState == .checking || updateState == .downloading {
-                        ProgressView()
-                            .controlSize(.mini)
-                    }
-                }
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .disabled(updateState == .checking || updateState == .downloading)
+            updateIndicator
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
     }
 
-    private var updateButtonTitle: String {
+    @ViewBuilder
+    private var updateIndicator: some View {
         switch updateState {
-        case .idle: return "Check for Updates"
-        case .checking: return "Checking…"
-        case .downloading: return "Downloading…"
-        case .updateAvailable: return "Update Available"
-        case .upToDate: return "Up to Date"
-        case .failed: return "Check Again"
+        case .idle:
+            Button("Check for Updates") {
+                checkForUpdates()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Check for updates")
+        case .checking:
+            ProgressView()
+                .controlSize(.mini)
+                .help("Checking for updates…")
+        case .downloading:
+            ProgressView()
+                .controlSize(.mini)
+                .help("Downloading update…")
+        case .upToDate:
+            HStack(spacing: 3) {
+                Image(systemName: "checkmark.circle")
+                Text("Up to date")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+        case .updateAvailable:
+            Button("Update Available") {
+                showUpdateConfirm = true
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Update available")
+        case .failed:
+            Button("Check Again") {
+                checkForUpdates()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Check for updates again")
         }
     }
 
@@ -264,7 +284,7 @@ struct SettingsView: View {
                     showUpdateConfirm = true
                 } else {
                     updateState = .upToDate
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
                         if self.updateState == .upToDate {
                             self.updateState = .idle
                         }
@@ -272,7 +292,7 @@ struct SettingsView: View {
                 }
             } else {
                 updateState = .failed
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
                     if self.updateState == .failed {
                         self.updateState = .idle
                     }
