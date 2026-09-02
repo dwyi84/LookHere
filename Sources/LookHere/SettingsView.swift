@@ -85,9 +85,7 @@ struct SettingsView: View {
 
     private var header: some View {
         HStack {
-            Circle()
-                .stroke(Color(nsColor: settings.ringColor), lineWidth: 2.5)
-                .frame(width: 18, height: 18)
+            headerMark
             Text("LookHere")
                 .font(.headline)
             Text("v\(UpdateChecker.currentVersion)")
@@ -99,6 +97,19 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+
+    private var headerMark: some View {
+        ZStack {
+            Circle()
+                .stroke(Color(nsColor: settings.ringColor), lineWidth: 2.5)
+                .frame(width: 18, height: 18)
+            CursorShape()
+                .fill(Color.black)
+                .overlay(CursorShape().stroke(Color.white, lineWidth: 1))
+                .frame(width: 7.4, height: 12)
+                .offset(x: 0.5, y: 0.5)
+        }
     }
 
     @ViewBuilder
@@ -385,6 +396,27 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+}
+
+private struct CursorShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            let points: [(CGFloat, CGFloat)] = [
+                (0.000, 0.000),
+                (0.000, 0.900),
+                (0.350, 0.692),
+                (0.563, 1.000),
+                (0.788, 0.938),
+                (0.575, 0.638),
+                (1.000, 0.638),
+            ]
+            for (i, p) in points.enumerated() {
+                let pt = CGPoint(x: p.0 * rect.width, y: p.1 * rect.height)
+                if i == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
+            }
+            path.closeSubpath()
+        }
     }
 }
 
