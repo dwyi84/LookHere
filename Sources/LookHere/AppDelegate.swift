@@ -38,8 +38,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.settings.isEnabled.toggle()
         }
         settings.$isEnabled
-            .sink { [weak self] enabled in
-                self?.overlayController.setEnabled(enabled)
+            .combineLatest(settings.$trailEnabled)
+            .sink { [weak self] circleEnabled, laserEnabled in
+                guard let self else { return }
+                self.overlayController.setActive(circleEnabled || laserEnabled)
+                self.overlayController.updateVisuals(ringEnabled: circleEnabled)
             }
             .store(in: &cancellables)
         settings.$hotkeyEnabled
@@ -115,7 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         rightClickMenu = NSMenu()
         rightClickMenu.addItem(
-            withTitle: settings.isEnabled ? "Hide Highlight" : "Show Highlight",
+            withTitle: settings.isEnabled ? "Hide Circle" : "Show Circle",
             action: #selector(toggleHighlight),
             keyEquivalent: ""
         )
@@ -173,7 +176,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleHighlight() {
         settings.isEnabled.toggle()
-        rightClickMenu.item(at: 0)?.title = settings.isEnabled ? "Hide Highlight" : "Show Highlight"
+        rightClickMenu.item(at: 0)?.title = settings.isEnabled ? "Hide Circle" : "Show Circle"
     }
 
     @objc private func toggleLaunchAtLoginFromMenu() {

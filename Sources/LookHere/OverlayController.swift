@@ -37,6 +37,7 @@ final class OverlayController {
         radius: CGFloat? = nil,
         opacity: Double? = nil,
         lineWidth: CGFloat? = nil,
+        ringEnabled: Bool? = nil,
         trailEnabled: Bool? = nil,
         trailDuration: Double? = nil
     ) {
@@ -44,6 +45,7 @@ final class OverlayController {
         let resolvedRadius = radius ?? CGFloat(settings.ringRadius)
         let resolvedOpacity = opacity ?? settings.ringOpacity
         let resolvedWidth = lineWidth ?? CGFloat(settings.ringLineWidth)
+        let resolvedRing = ringEnabled ?? settings.isEnabled
         let resolvedTrail = trailEnabled ?? settings.trailEnabled
         let resolvedDuration = trailDuration ?? settings.trailDuration
 
@@ -53,17 +55,18 @@ final class OverlayController {
                 radius: resolvedRadius,
                 opacity: resolvedOpacity,
                 lineWidth: resolvedWidth,
+                ringEnabled: resolvedRing,
                 trailEnabled: resolvedTrail,
                 trailDuration: resolvedDuration
             )
         }
     }
 
-    func setEnabled(_ enabled: Bool) {
+    func setActive(_ active: Bool) {
         for window in windows {
             window.haloView.hideRing()
             window.haloView.clearRipples()
-            if enabled {
+            if active {
                 window.orderFrontRegardless()
             } else {
                 window.orderOut(nil)
@@ -72,7 +75,7 @@ final class OverlayController {
     }
 
     func updateCursor(_ cgPoint: CGPoint) {
-        guard settings.isEnabled else { return }
+        guard settings.isEnabled || settings.trailEnabled else { return }
         let point = appKitPoint(from: cgPoint)
         for window in windows {
             if window.frame.contains(point) {

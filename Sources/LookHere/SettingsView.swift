@@ -149,7 +149,7 @@ struct SettingsView: View {
 
     private var highlightSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            switchRow("Enable Highlight", isOn: $settings.isEnabled)
+            switchRow("Enable Circle", isOn: $settings.isEnabled)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("Ring Color")
@@ -157,7 +157,7 @@ struct SettingsView: View {
                 colorSwatches
             }
 
-            sliderRow(title: "Radius", value: $settings.ringRadius, range: 12...60, step: 1) {
+            sliderRow(title: "Radius", value: $settings.ringRadius, range: 7...60, step: 1) {
                 "\(Int($0.rounded())) pt"
             }
             sliderRow(title: "Opacity", value: $settings.ringOpacity, range: 0.15...1.0, step: 0.05) {
@@ -223,7 +223,7 @@ struct SettingsView: View {
 
     private var trailSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            switchRow("Laser Trail", isOn: $settings.trailEnabled)
+            switchRow("Enable Laser", isOn: $settings.trailEnabled)
 
             sliderRow(title: "Trail Duration", value: $settings.trailDuration, range: 0.5...5.0, step: 0.5) {
                 String(format: "%.1fs", $0)
@@ -238,7 +238,7 @@ struct SettingsView: View {
             switchRow("Global Hotkey", isOn: $settings.hotkeyEnabled)
 
             HStack {
-                Text("Toggle Highlight")
+                Text("Toggle Circle")
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button(action: hotkeyRecorder.isRecording ? {} : startRecording) {

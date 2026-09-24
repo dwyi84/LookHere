@@ -10,6 +10,7 @@ final class HaloLayerView: NSView {
     private var radius: CGFloat = 30
     private var strokeWidth: CGFloat = 3
     private var ringColorValue: NSColor = .systemOrange
+    private var ringEnabled = true
     private var trailEnabled = false
     private var trailDuration: Double = 2.0
     private var prevTrailPoint: CGPoint?
@@ -37,6 +38,7 @@ final class HaloLayerView: NSView {
         if trailEnabled {
             appendTrailPoint(point)
         }
+        guard ringEnabled else { return }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         ringLayer.isHidden = false
@@ -58,12 +60,14 @@ final class HaloLayerView: NSView {
         radius: CGFloat,
         opacity: Double,
         lineWidth: CGFloat,
+        ringEnabled: Bool,
         trailEnabled: Bool,
         trailDuration: Double
     ) {
         self.radius = radius
         self.strokeWidth = lineWidth
         self.ringColorValue = color
+        self.ringEnabled = ringEnabled
         self.trailEnabled = trailEnabled
         self.trailDuration = trailDuration
 
@@ -71,6 +75,9 @@ final class HaloLayerView: NSView {
         CATransaction.setDisableActions(true)
         ringLayer.strokeColor = color.withAlphaComponent(CGFloat(opacity)).cgColor
         ringLayer.lineWidth = lineWidth
+        if !ringEnabled {
+            ringLayer.isHidden = true
+        }
         let side = radius * 2
         let rect = CGRect(origin: .zero, size: CGSize(width: side, height: side))
         ringLayer.path = CGPath(ellipseIn: rect, transform: nil)
