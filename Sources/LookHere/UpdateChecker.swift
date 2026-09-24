@@ -27,7 +27,7 @@ final class UpdateChecker: ObservableObject {
     static let repoOwner = "dwyi84"
     static let repoName = "LookHere"
     static let currentVersion =
-        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "1.6.1"
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "1.6.2"
 
     @Published private(set) var updateState: UpdateState = .idle
 
@@ -90,8 +90,8 @@ final class UpdateChecker: ObservableObject {
         let alert = NSAlert()
         alert.messageText = "Update to v\(release.version)?"
         alert.informativeText =
-            "LookHere \(release.version) is available — you have \(Self.currentVersion). "
-            + "The update is downloaded and installed automatically."
+            "You're currently on v\(Self.currentVersion). LookHere v\(release.version) "
+            + "will be downloaded and installed automatically."
         alert.addButton(withTitle: "Update Now")
         alert.addButton(withTitle: "Later")
         if alert.runModal() == .alertFirstButtonReturn {
