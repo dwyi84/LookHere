@@ -13,8 +13,16 @@ final class HaloLayerView: NSView {
     private var ringEnabled = true
     private var trailEnabled = false
     private var trailDuration: Double = 2.0
-    private var prevTrailPoint: CGPoint?
     private var lastTrailPoint: CGPoint?
+    private var lastTrailActivity: TimeInterval = 0
+    private var headSegment: TrailSegment?
+
+    // A trail segment grows until it reaches this length, then a new one
+    // starts at its tip. Drawing one growing stroke instead of a fresh layer
+    // per mouse event keeps the line smooth instead of beaded.
+    private let maxTrailSegmentLength: CGFloat = 16
+    private let trailStep: CGFloat = 3
+    private let trailDwellTimeout: TimeInterval = 0.15
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -51,8 +59,8 @@ final class HaloLayerView: NSView {
         CATransaction.setDisableActions(true)
         ringLayer.isHidden = true
         CATransaction.commit()
-        prevTrailPoint = nil
         lastTrailPoint = nil
+        headSegment = nil
     }
 
     func configureRing(
@@ -147,79 +155,130 @@ final class HaloLayerView: NSView {
         trailSegments.forEach { $0.removeAll() }
         trailSegments.removeAll()
         stopTrailTimer()
-        prevTrailPoint = nil
         lastTrailPoint = nil
+        headSegment = nil
     }
 
     // MARK: - Trail (smooth continuous polyline)
 
-    private func midpoint(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
-        CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
-    }
-
     private func appendTrailPoint(_ point: CGPoint) {
         guard let last = lastTrailPoint else {
             lastTrailPoint = point
+            lastTrailActivity = CACurrentMediaTime()
             return
         }
-        let distance = hypot(point.x - last.x, point.y - last.y)
-        guard distance >= 3 else { return }
 
-        if let prev = prevTrailPoint {
-            spawnTrailSegment(from: midpoint(prev, last), to: midpoint(last, point))
+        let now = CACurrentMediaTime()
+        let distance = hypot(point.x - last.x, point.y - last.y)
+
+        // Tiny, sustained movement means the cursor is dwelling in place.
+        // Re-anchor now and then so a random walk can't accumulate into an
+        // ink blob, but never stamp a segment for it.
+        guard distance >= trailStep else {
+            if now - lastTrailActivity > trailDwellTimeout {
+                lastTrailPoint = point
+                lastTrailActivity = now
+            }
+            return
         }
-        prevTrailPoint = last
+
+        lastTrailActivity = now
+
+        if let head = headSegment {
+            if head.pathLength + distance <= maxTrailSegmentLength {
+                extendTrailSegment(head, to: point)
+                lastTrailPoint = point
+                return
+            }
+        }
+
+        startTrailSegment(from: last, to: point)
         lastTrailPoint = point
     }
 
-    private func spawnTrailSegment(from: CGPoint, to: CGPoint) {
+    private func startTrailSegment(from: CGPoint, to: CGPoint) {
         if trailSegments.count >= 300 {
             trailSegments.removeFirst().removeAll()
         }
 
         let baseWidth = max(radius * 0.16, 2.5)
-        let pad = baseWidth * 2.6
-        let minX = min(from.x, to.x) - pad
-        let minY = min(from.y, to.y) - pad
-        let w = abs(to.x - from.x) + pad * 2
-        let h = abs(to.y - from.y) + pad * 2
-        let bounds = CGRect(x: 0, y: 0, width: max(w, 0.01), height: max(h, 0.01))
-
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: from.x - minX, y: from.y - minY))
-        path.addLine(to: CGPoint(x: to.x - minX, y: to.y - minY))
 
         let core = CAShapeLayer()
         core.fillColor = NSColor.clear.cgColor
         core.strokeColor = ringColorValue.cgColor
         core.lineWidth = baseWidth
         core.lineCap = .round
+        core.lineJoin = .round
 
         let glow = CAShapeLayer()
         glow.fillColor = NSColor.clear.cgColor
         glow.strokeColor = ringColorValue.cgColor
         glow.lineWidth = baseWidth * 2.4
-        glow.lineCap = .round
+        // Butt caps stop the translucent glow of neighbouring segments from
+        // stacking into bright "ink dots" at every joint.
+        glow.lineCap = .butt
+        glow.lineJoin = .round
         glow.opacity = 0.35
+
+        let segment = TrailSegment(
+            core: core,
+            glow: glow,
+            birthTime: CACurrentMediaTime(),
+            baseWidth: baseWidth,
+            points: [from, to],
+            pathLength: hypot(to.x - from.x, to.y - from.y)
+        )
+        layer?.addSublayer(glow)
+        layer?.addSublayer(core)
+        trailSegments.append(segment)
+        headSegment = segment
+        layoutTrailSegment(segment)
+        startTrailTimer()
+    }
+
+    private func extendTrailSegment(_ segment: TrailSegment, to point: CGPoint) {
+        if let tail = segment.points.last {
+            segment.pathLength += hypot(point.x - tail.x, point.y - tail.y)
+        }
+        segment.points.append(point)
+        // Keep the growing tip looking freshly drawn while the cursor moves.
+        segment.birthTime = CACurrentMediaTime()
+        layoutTrailSegment(segment)
+    }
+
+    private func layoutTrailSegment(_ segment: TrailSegment) {
+        let points = segment.points
+        guard let first = points.first else { return }
+
+        var minX = first.x, maxX = first.x
+        var minY = first.y, maxY = first.y
+        for p in points {
+            minX = min(minX, p.x); maxX = max(maxX, p.x)
+            minY = min(minY, p.y); maxY = max(maxY, p.y)
+        }
+        let pad = segment.baseWidth * 2.6
+        minX -= pad; minY -= pad
+        maxX += pad; maxY += pad
+        let width = max(maxX - minX, 0.01)
+        let height = max(maxY - minY, 0.01)
+
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: first.x - minX, y: first.y - minY))
+        for p in points.dropFirst() {
+            path.addLine(to: CGPoint(x: p.x - minX, y: p.y - minY))
+        }
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        core.path = path
-        core.bounds = bounds
-        core.position = CGPoint(x: minX + w / 2, y: minY + h / 2)
-        core.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        glow.path = path
-        glow.bounds = bounds
-        glow.position = core.position
-        glow.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        segment.core.path = path
+        segment.glow.path = path
+        let bounds = CGRect(x: 0, y: 0, width: width, height: height)
+        segment.core.bounds = bounds
+        segment.glow.bounds = bounds
+        let position = CGPoint(x: minX + width / 2, y: minY + height / 2)
+        segment.core.position = position
+        segment.glow.position = position
         CATransaction.commit()
-
-        layer?.addSublayer(glow)
-        layer?.addSublayer(core)
-        trailSegments.append(
-            TrailSegment(core: core, glow: glow, birthTime: CACurrentMediaTime(), baseWidth: baseWidth)
-        )
-        startTrailTimer()
     }
 
     private func recolorTrail(with color: NSColor) {
@@ -264,7 +323,13 @@ final class HaloLayerView: NSView {
             segment.glow.lineWidth = width * 2.4
             CATransaction.commit()
         }
-        trailSegments.removeAll { now - $0.birthTime >= trailDuration }
+        trailSegments.removeAll { segment in
+            guard now - segment.birthTime >= trailDuration else { return false }
+            if segment === headSegment {
+                headSegment = nil
+            }
+            return true
+        }
         if trailSegments.isEmpty {
             stopTrailTimer()
         }
@@ -274,14 +339,25 @@ final class HaloLayerView: NSView {
 private final class TrailSegment {
     let core: CAShapeLayer
     let glow: CAShapeLayer
-    let birthTime: TimeInterval
+    var birthTime: TimeInterval
     let baseWidth: CGFloat
+    var points: [CGPoint]
+    var pathLength: CGFloat
 
-    init(core: CAShapeLayer, glow: CAShapeLayer, birthTime: TimeInterval, baseWidth: CGFloat) {
+    init(
+        core: CAShapeLayer,
+        glow: CAShapeLayer,
+        birthTime: TimeInterval,
+        baseWidth: CGFloat,
+        points: [CGPoint],
+        pathLength: CGFloat
+    ) {
         self.core = core
         self.glow = glow
         self.birthTime = birthTime
         self.baseWidth = baseWidth
+        self.points = points
+        self.pathLength = pathLength
     }
 
     func removeAll() {
