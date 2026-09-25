@@ -27,7 +27,7 @@ final class UpdateChecker: ObservableObject {
     static let repoOwner = "dwyi84"
     static let repoName = "LookHere"
     static let currentVersion =
-        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "1.6.6"
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "1.6.7"
 
     @Published private(set) var updateState: UpdateState = .idle
 

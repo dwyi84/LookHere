@@ -69,7 +69,7 @@ cd LookHere
 - **Ring Color** — choose from preset swatches or **Ring Invert**, which inverts the colors under the ring so it stands out on any background; changes apply instantly.
 - **Radius** — outer ring size in points (7–90pt).
 - **Thickness** — ring band width as a percentage of the radius (up to a fully filled disc).
-- **Opacity** — ring transparency (15–90%).
+- **Opacity** — ring transparency (20–80%).
 - **Enable Laser** — independently toggle a smooth tapering neon laser trail and set how long it lasts (0.5–5s).
 - **Global Hotkey** — toggle the shortcut, or click the hotkey button to record a new one.
 - **Check for Updates** — the header shows the current version with a button that downloads and installs newer releases in one click. LookHere also checks silently at every launch and flags updates in the header.

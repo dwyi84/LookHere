@@ -70,7 +70,7 @@ final class SettingsStore: ObservableObject {
         ringInvert = defaults.object(forKey: Keys.ringInvert) as? Bool ?? false
         let storedRadius = defaults.object(forKey: Keys.ringRadius) as? Double ?? 30
         ringRadius = storedRadius
-        ringOpacity = min(defaults.object(forKey: Keys.ringOpacity) as? Double ?? 0.85, 0.9)
+        ringOpacity = min(max(defaults.object(forKey: Keys.ringOpacity) as? Double ?? 0.8, 0.2), 0.8)
         if let storedRatio = defaults.object(forKey: Keys.ringThicknessRatio) as? Double {
             ringThicknessRatio = storedRatio
         } else if let legacyWidth = defaults.object(forKey: Keys.ringLineWidth) as? Double,
@@ -109,7 +109,7 @@ final class SettingsStore: ObservableObject {
         ringColor = NSColor.systemOrange
         ringInvert = false
         ringRadius = 30
-        ringOpacity = 0.85
+        ringOpacity = 0.8
         ringThicknessRatio = 0.10
         hotkeyEnabled = true
         hotkeyKeyCode = 37

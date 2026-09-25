@@ -14,7 +14,6 @@ final class HaloLayerView: NSView {
     private var trailEnabled = false
     private var trailDuration: Double = 2.0
     private var invertEnabled = false
-    private var invertRefreshTimer: Timer?
     private var lastTrailPoint: CGPoint?
     private var lastTrailActivity: TimeInterval = 0
     private var headSegment: TrailSegment?
@@ -121,28 +120,28 @@ final class HaloLayerView: NSView {
         CATransaction.commit()
 
         recolorTrail(with: effectiveColor)
-        updateInvertRefresh()
+        updateInvertKeepAlive()
     }
 
     /// The desktop colour behind a difference-blended window is only sampled
     /// while the layer tree keeps being presented. When nothing else changes
-    /// (cursor parked, no laser), the OS can stop refreshing the blend and the
-    /// inversion reverts — so nudge a redraw on a light timer while inverting.
-    private func updateInvertRefresh() {
-        let shouldRun = invertEnabled && (ringEnabled || trailEnabled)
-        if shouldRun, invertRefreshTimer == nil {
-            let timer = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
-                MainActor.assumeIsolated {
-                    guard let self else { return }
-                    self.needsDisplay = true
-                    self.layer?.setNeedsDisplay()
-                }
-            }
-            invertRefreshTimer = timer
-            RunLoop.main.add(timer, forMode: .common)
-        } else if !shouldRun {
-            invertRefreshTimer?.invalidate()
-            invertRefreshTimer = nil
+    /// (cursor parked, no laser) the WindowServer can stop refreshing the
+    /// blend and the ring reverts to plain white — so keep a near-invisible
+    /// render-server-side animation running to force continuous compositing.
+    private func updateInvertKeepAlive() {
+        guard let layer else { return }
+        if invertEnabled {
+            guard layer.animation(forKey: "invertKeepAlive") == nil else { return }
+            let animation = CABasicAnimation(keyPath: "opacity")
+            animation.fromValue = 1.0
+            animation.toValue = 0.995
+            animation.duration = 0.5
+            animation.autoreverses = true
+            animation.repeatCount = .infinity
+            animation.isRemovedOnCompletion = false
+            layer.add(animation, forKey: "invertKeepAlive")
+        } else {
+            layer.removeAnimation(forKey: "invertKeepAlive")
         }
     }
 

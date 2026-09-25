@@ -162,7 +162,7 @@ struct SettingsView: View {
             sliderRow(title: "Thickness", value: $settings.ringThicknessRatio, range: 0.01...1.0, step: 0.01) {
                 "\(Int(($0 * 100).rounded()))% of radius"
             }
-            sliderRow(title: "Opacity", value: $settings.ringOpacity, range: 0.15...0.9, step: 0.05) {
+            sliderRow(title: "Opacity", value: $settings.ringOpacity, range: 0.2...0.8, step: 0.05) {
                 "\(Int(($0 * 100).rounded()))%"
             }
         }
