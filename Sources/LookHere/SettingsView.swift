@@ -163,8 +163,8 @@ struct SettingsView: View {
             sliderRow(title: "Opacity", value: $settings.ringOpacity, range: 0.15...1.0, step: 0.05) {
                 "\(Int(($0 * 100).rounded()))%"
             }
-            sliderRow(title: "Thickness", value: $settings.ringLineWidth, range: 1...8, step: 0.5) {
-                String(format: "%.1f pt", $0)
+            sliderRow(title: "Thickness", value: $settings.ringLineWidth, range: 1...90, step: 1) {
+                "\(Int($0.rounded())) pt"
             }
         }
     }
