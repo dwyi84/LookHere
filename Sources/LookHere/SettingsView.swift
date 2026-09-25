@@ -17,7 +17,6 @@ struct SettingsView: View {
         NSColor(red: 0.686, green: 0.322, blue: 0.871, alpha: 1),   // purple
         NSColor(red: 0.0, green: 0.478, blue: 1.0, alpha: 1),       // blue
         NSColor(red: 0.353, green: 0.784, blue: 0.98, alpha: 1),    // cyan
-        NSColor(red: 0.188, green: 0.663, blue: 0.639, alpha: 1),   // teal
         NSColor(red: 0.208, green: 0.788, blue: 0.349, alpha: 1),   // green
         NSColor(red: 1.0, green: 0.843, blue: 0.0, alpha: 1),       // yellow
         NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1),         // white
@@ -160,11 +159,11 @@ struct SettingsView: View {
             sliderRow(title: "Radius", value: $settings.ringRadius, range: 7...90, step: 1) {
                 "\(Int($0.rounded())) pt"
             }
-            sliderRow(title: "Opacity", value: $settings.ringOpacity, range: 0.15...1.0, step: 0.05) {
-                "\(Int(($0 * 100).rounded()))%"
-            }
             sliderRow(title: "Thickness", value: $settings.ringThicknessRatio, range: 0.01...1.0, step: 0.01) {
                 "\(Int(($0 * 100).rounded()))% of radius"
+            }
+            sliderRow(title: "Opacity", value: $settings.ringOpacity, range: 0.15...0.9, step: 0.05) {
+                "\(Int(($0 * 100).rounded()))%"
             }
         }
     }
@@ -172,24 +171,49 @@ struct SettingsView: View {
     private var colorSwatches: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
             ForEach(presetColors, id: \.self) { color in
-                let isSelected = isSameColor(settings.ringColor, color)
+                let isSelected = !settings.ringInvert && isSameColor(settings.ringColor, color)
                 Button {
                     settings.ringColor = color
+                    settings.ringInvert = false
                 } label: {
                     Circle()
                         .fill(Color(nsColor: color))
-                        .overlay(
-                            Circle()
-                                .strokeBorder(
-                                    isSelected ? Color.accentColor : Color.gray.opacity(0.2),
-                                    lineWidth: isSelected ? 2 : 1
-                                )
-                        )
+                        .overlay(swatchBorder(isSelected: isSelected))
                 }
                 .buttonStyle(.plain)
                 .frame(width: 30, height: 30)
             }
+
+            Button {
+                settings.ringInvert = true
+            } label: {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white, location: 0.0),
+                                .init(color: .white, location: 0.5),
+                                .init(color: .black, location: 0.5),
+                                .init(color: .black, location: 1.0),
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .overlay(swatchBorder(isSelected: settings.ringInvert))
+            }
+            .buttonStyle(.plain)
+            .frame(width: 30, height: 30)
+            .help("Ring Invert — invert the colors under the ring")
         }
+    }
+
+    private func swatchBorder(isSelected: Bool) -> some View {
+        Circle()
+            .strokeBorder(
+                isSelected ? Color.accentColor : Color.gray.opacity(0.2),
+                lineWidth: isSelected ? 2 : 1
+            )
     }
 
     private func isSameColor(_ a: NSColor, _ b: NSColor) -> Bool {

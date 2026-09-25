@@ -3,7 +3,6 @@ import QuartzCore
 
 final class HaloLayerView: NSView {
     private let ringLayer = CAShapeLayer()
-    private var ripples: [CAShapeLayer] = []
     private var trailSegments: [TrailSegment] = []
     private var trailTimer: Timer?
 
@@ -66,6 +65,7 @@ final class HaloLayerView: NSView {
 
     func configureRing(
         color: NSColor,
+        invert: Bool,
         radius: CGFloat,
         opacity: Double,
         thicknessRatio: Double,
@@ -75,7 +75,11 @@ final class HaloLayerView: NSView {
     ) {
         self.radius = radius
         self.thicknessRatio = thicknessRatio
-        self.ringColorValue = color
+        // Invert mode blends the whole overlay against the desktop with a
+        // "difference" filter, so the stroke must be white to produce a true
+        // colour inversion. Transparent areas leave the backdrop untouched.
+        let effectiveColor = invert ? NSColor.white : color
+        self.ringColorValue = effectiveColor
         self.ringEnabled = ringEnabled
         self.trailEnabled = trailEnabled
         self.trailDuration = trailDuration
@@ -87,84 +91,75 @@ final class HaloLayerView: NSView {
         self.strokeWidth = bandWidth
         let centerlineRadius = radius - bandWidth / 2
 
+        self.layer?.compositingFilter = invert ? "differenceBlendMode" : nil
+
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        ringLayer.strokeColor = color.withAlphaComponent(CGFloat(opacity)).cgColor
+        ringLayer.strokeColor = effectiveColor.withAlphaComponent(CGFloat(opacity)).cgColor
         ringLayer.lineWidth = bandWidth
         if !ringEnabled {
             ringLayer.isHidden = true
         }
+        // Lay the circle out clockwise from 12 o'clock so stroke sweeps (the
+        // click clock-wipe) read like a clock face.
+        let path = CGMutablePath()
+        path.addArc(
+            center: CGPoint(x: centerlineRadius, y: centerlineRadius),
+            radius: centerlineRadius,
+            startAngle: .pi / 2,
+            endAngle: .pi / 2 - 2 * .pi,
+            clockwise: true
+        )
         let side = centerlineRadius * 2
         let rect = CGRect(origin: .zero, size: CGSize(width: side, height: side))
-        ringLayer.path = CGPath(ellipseIn: rect, transform: nil)
+        ringLayer.path = path
         ringLayer.bounds = rect
         ringLayer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         CATransaction.commit()
 
-        recolorTrail(with: color)
+        recolorTrail(with: effectiveColor)
     }
 
-    func spawnRipple(at point: CGPoint, color: NSColor, lineWidth: CGFloat, outerRadius: CGFloat) {
-        if ripples.count >= 10 {
-            ripples.removeFirst().removeFromSuperlayer()
-        }
+    /// Clock-wipe click effect: the ring erases clockwise, then redraws
+    /// clockwise — two full laps around the dial.
+    func playClockWipe() {
+        guard ringEnabled else { return }
 
-        let ripple = CAShapeLayer()
-        let startRadius: CGFloat = 6
-        let rect = CGRect(origin: .zero, size: CGSize(width: startRadius * 2, height: startRadius * 2))
-        ripple.fillColor = NSColor.clear.cgColor
-        ripple.strokeColor = color.cgColor
-        ripple.lineWidth = max(lineWidth, 2)
+        let lap: CFTimeInterval = 0.45
+        let now = CACurrentMediaTime()
+
+        let erase = CABasicAnimation(keyPath: "strokeStart")
+        erase.fromValue = 0
+        erase.toValue = 1
+        erase.duration = lap
+        erase.beginTime = now
+        erase.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+
+        let draw = CABasicAnimation(keyPath: "strokeEnd")
+        draw.fromValue = 0
+        draw.toValue = 1
+        draw.duration = lap
+        draw.beginTime = now + lap
+        draw.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        ripple.path = CGPath(ellipseIn: rect, transform: nil)
-        ripple.bounds = rect
-        ripple.position = point
-        ripple.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        // Model values stay at a full ring after the animations finish.
+        ringLayer.strokeStart = 0
+        ringLayer.strokeEnd = 1
+        ringLayer.add(erase, forKey: "clockErase")
+        ringLayer.add(draw, forKey: "clockDraw")
         CATransaction.commit()
-
-        layer?.addSublayer(ripple)
-        ripples.append(ripple)
-
-        let finalScale = (outerRadius + 8) / startRadius
-
-        let scale = CABasicAnimation(keyPath: "transform.scale")
-        scale.fromValue = 1.0
-        scale.toValue = finalScale
-        scale.timingFunction = CAMediaTimingFunction(name: .easeOut)
-
-        let fade = CABasicAnimation(keyPath: "opacity")
-        fade.fromValue = 0.9
-        fade.toValue = 0.0
-        fade.timingFunction = CAMediaTimingFunction(name: .easeOut)
-
-        let group = CAAnimationGroup()
-        group.animations = [scale, fade]
-        group.duration = 0.4
-        group.isRemovedOnCompletion = false
-        group.fillMode = .forwards
-        group.delegate = RippleAnimationDelegate { [weak ripple, weak self] in
-            ripple?.removeFromSuperlayer()
-            self?.ripples.removeAll { $0 === ripple }
-        }
-
-        // Model end-state matches the animation's final values so the layer
-        // never reverts to its initial (small, opaque) state on completion.
-        ripple.opacity = 0
-        ripple.setAffineTransform(CGAffineTransform(scaleX: finalScale, y: finalScale))
-
-        ripple.add(group, forKey: "ripple")
     }
 
-    func clearRipples() {
-        ripples.forEach { $0.removeFromSuperlayer() }
-        ripples.removeAll()
+    func clearEffects() {
         trailSegments.forEach { $0.removeAll() }
         trailSegments.removeAll()
         stopTrailTimer()
         lastTrailPoint = nil
         headSegment = nil
+        ringLayer.removeAnimation(forKey: "clockErase")
+        ringLayer.removeAnimation(forKey: "clockDraw")
     }
 
     // MARK: - Trail (smooth continuous polyline)
@@ -371,17 +366,5 @@ private final class TrailSegment {
     func removeAll() {
         core.removeFromSuperlayer()
         glow.removeFromSuperlayer()
-    }
-}
-
-private final class RippleAnimationDelegate: NSObject, CAAnimationDelegate {
-    private let onFinish: () -> Void
-
-    init(onFinish: @escaping () -> Void) {
-        self.onFinish = onFinish
-    }
-
-    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
-        onFinish()
     }
 }

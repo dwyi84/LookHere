@@ -15,7 +15,7 @@ A featherweight **macOS menu bar utility** that draws a smooth, zero-lag **halo 
 ## Features
 
 - **Zero-Lag Halo** — a crisp circular ring that follows your cursor at full display refresh rate (powered by a `CGEvent` tap running on the main run loop; no polling, no latency).
-- **Click Ripple Feedback** — subtle expanding ripples animate on every left / right / middle click so your audience always sees where you clicked.
+- **Clock-Wipe Click Feedback** — every left / right / middle click sweeps the ring clockwise like a clock hand — it erases, then redraws, over two full laps — so your audience sees exactly where you clicked.
 - **Laser Mode** — optionally leave a smooth, tapering neon laser trail behind the cursor (0.5–5s) that thins and fades out, perfect for laser-pointer-style highlighting. Enable it independently of the halo ring.
 - **One-Click Auto-Update** — LookHere checks GitHub Releases silently at launch, and "Check for Updates" (settings header or right-click menu) queries it on demand. When a newer version is found it downloads, replaces the running app in place, and relaunches — all from one click.
 - **Click-Through Overlay** — fully transparent, borderless, and set to `ignoresMouseEvents`, so it never blocks a single click.
@@ -57,7 +57,7 @@ cd LookHere
 | Action | Result |
 | --- | --- |
 | Move mouse | Halo ring follows the cursor |
-| Left / right / middle click | Ripple animation at the click point |
+| Left / right / middle click | Clock-wipe animation on the ring |
 | `⇧⌘L` (default) | Toggle circle on / off |
 | Menu bar icon → Settings | Tweak color, radius, opacity, thickness |
 | Menu bar icon → right-click | Circle toggle · Launch at Login · Check for Updates · Settings · Quit |
@@ -66,10 +66,10 @@ cd LookHere
 
 - **Enable Circle** — independently toggle the halo ring that follows the cursor.
 - **Live Preview** — the ring renders in the settings panel as you adjust it.
-- **Ring Color** — choose from preset swatches; changes apply instantly.
-- **Radius** — ring size in points (7–60pt).
-- **Opacity** — ring transparency.
-- **Thickness** — ring stroke width.
+- **Ring Color** — choose from preset swatches or **Ring Invert**, which inverts the colors under the ring so it stands out on any background; changes apply instantly.
+- **Radius** — outer ring size in points (7–90pt).
+- **Thickness** — ring band width as a percentage of the radius (up to a fully filled disc).
+- **Opacity** — ring transparency (15–90%).
 - **Enable Laser** — independently toggle a smooth tapering neon laser trail and set how long it lasts (0.5–5s).
 - **Global Hotkey** — toggle the shortcut, or click the hotkey button to record a new one.
 - **Check for Updates** — the header shows the current version with a button that downloads and installs newer releases in one click. LookHere also checks silently at every launch and flags updates in the header.

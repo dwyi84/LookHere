@@ -34,6 +34,7 @@ final class OverlayController {
     /// `@Published` property inside a sink returns the previous value).
     func updateVisuals(
         color: NSColor? = nil,
+        invert: Bool? = nil,
         radius: CGFloat? = nil,
         opacity: Double? = nil,
         thicknessRatio: Double? = nil,
@@ -42,6 +43,7 @@ final class OverlayController {
         trailDuration: Double? = nil
     ) {
         let resolvedColor = color ?? settings.effectiveColor
+        let resolvedInvert = invert ?? settings.ringInvert
         let resolvedRadius = radius ?? CGFloat(settings.ringRadius)
         let resolvedOpacity = opacity ?? settings.ringOpacity
         let resolvedThickness = thicknessRatio ?? settings.ringThicknessRatio
@@ -52,6 +54,7 @@ final class OverlayController {
         for window in windows {
             window.haloView.configureRing(
                 color: resolvedColor,
+                invert: resolvedInvert,
                 radius: resolvedRadius,
                 opacity: resolvedOpacity,
                 thicknessRatio: resolvedThickness,
@@ -65,7 +68,7 @@ final class OverlayController {
     func setActive(_ active: Bool) {
         for window in windows {
             window.haloView.hideRing()
-            window.haloView.clearRipples()
+            window.haloView.clearEffects()
             if active {
                 window.orderFrontRegardless()
             } else {
@@ -87,17 +90,11 @@ final class OverlayController {
         }
     }
 
-    func spawnRipple(at cgPoint: CGPoint) {
+    func playClockWipe(at cgPoint: CGPoint) {
         guard settings.isEnabled else { return }
         let point = appKitPoint(from: cgPoint)
         for window in windows where window.frame.contains(point) {
-            let local = NSPoint(x: point.x - window.frame.minX, y: point.y - window.frame.minY)
-            window.haloView.spawnRipple(
-                at: local,
-                color: settings.effectiveColor,
-                lineWidth: CGFloat(settings.ringRadius) * CGFloat(settings.ringThicknessRatio),
-                outerRadius: CGFloat(settings.ringRadius)
-            )
+            window.haloView.playClockWipe()
             break
         }
     }

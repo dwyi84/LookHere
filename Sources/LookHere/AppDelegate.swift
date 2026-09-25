@@ -64,6 +64,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.overlayController.updateVisuals(color: color)
             }
             .store(in: &cancellables)
+        settings.$ringInvert
+            .sink { [weak self] invert in
+                self?.overlayController.updateVisuals(invert: invert)
+            }
+            .store(in: &cancellables)
         settings.$ringRadius
             .sink { [weak self] radius in
                 self?.overlayController.updateVisuals(radius: CGFloat(radius))
@@ -215,7 +220,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.overlayController.updateCursor(location)
             },
             onPress: { [weak self] location in
-                self?.overlayController.spawnRipple(at: location)
+                self?.overlayController.playClockWipe(at: location)
             }
         )
         mouseTracker?.start()

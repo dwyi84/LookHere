@@ -15,6 +15,12 @@ final class SettingsStore: ObservableObject {
         didSet { persistColor() }
     }
 
+    /// When true the ring ignores `ringColor` and inverts the desktop content
+    /// beneath it (a "difference" blend against the backdrop).
+    @Published var ringInvert: Bool {
+        didSet { defaults.set(ringInvert, forKey: Keys.ringInvert) }
+    }
+
     @Published var ringRadius: Double {
         didSet { defaults.set(ringRadius, forKey: Keys.ringRadius) }
     }
@@ -61,9 +67,10 @@ final class SettingsStore: ObservableObject {
 
     init() {
         isEnabled = defaults.object(forKey: Keys.isEnabled) as? Bool ?? true
+        ringInvert = defaults.object(forKey: Keys.ringInvert) as? Bool ?? false
         let storedRadius = defaults.object(forKey: Keys.ringRadius) as? Double ?? 30
         ringRadius = storedRadius
-        ringOpacity = defaults.object(forKey: Keys.ringOpacity) as? Double ?? 0.85
+        ringOpacity = min(defaults.object(forKey: Keys.ringOpacity) as? Double ?? 0.85, 0.9)
         if let storedRatio = defaults.object(forKey: Keys.ringThicknessRatio) as? Double {
             ringThicknessRatio = storedRatio
         } else if let legacyWidth = defaults.object(forKey: Keys.ringLineWidth) as? Double,
@@ -100,6 +107,7 @@ final class SettingsStore: ObservableObject {
         defaults.removePersistentDomain(forName: "com.lookhere.LookHere")
         isEnabled = true
         ringColor = NSColor.systemOrange
+        ringInvert = false
         ringRadius = 30
         ringOpacity = 0.85
         ringThicknessRatio = 0.10
@@ -174,6 +182,7 @@ final class SettingsStore: ObservableObject {
 
     private enum Keys {
         static let isEnabled = "isEnabled"
+        static let ringInvert = "ringInvert"
         static let red = "ringColor.red"
         static let green = "ringColor.green"
         static let blue = "ringColor.blue"
