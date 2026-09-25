@@ -13,6 +13,8 @@ final class HaloLayerView: NSView {
     private var ringEnabled = true
     private var trailEnabled = false
     private var trailDuration: Double = 2.0
+    private var invertEnabled = false
+    private var invertRefreshTimer: Timer?
     private var lastTrailPoint: CGPoint?
     private var lastTrailActivity: TimeInterval = 0
     private var headSegment: TrailSegment?
@@ -80,6 +82,7 @@ final class HaloLayerView: NSView {
         // colour inversion. Transparent areas leave the backdrop untouched.
         let effectiveColor = invert ? NSColor.white : color
         self.ringColorValue = effectiveColor
+        self.invertEnabled = invert
         self.ringEnabled = ringEnabled
         self.trailEnabled = trailEnabled
         self.trailDuration = trailDuration
@@ -118,6 +121,29 @@ final class HaloLayerView: NSView {
         CATransaction.commit()
 
         recolorTrail(with: effectiveColor)
+        updateInvertRefresh()
+    }
+
+    /// The desktop colour behind a difference-blended window is only sampled
+    /// while the layer tree keeps being presented. When nothing else changes
+    /// (cursor parked, no laser), the OS can stop refreshing the blend and the
+    /// inversion reverts — so nudge a redraw on a light timer while inverting.
+    private func updateInvertRefresh() {
+        let shouldRun = invertEnabled && (ringEnabled || trailEnabled)
+        if shouldRun, invertRefreshTimer == nil {
+            let timer = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.needsDisplay = true
+                    self.layer?.setNeedsDisplay()
+                }
+            }
+            invertRefreshTimer = timer
+            RunLoop.main.add(timer, forMode: .common)
+        } else if !shouldRun {
+            invertRefreshTimer?.invalidate()
+            invertRefreshTimer = nil
+        }
     }
 
     /// Clock-wipe click effect: the ring erases clockwise, then redraws
@@ -210,7 +236,10 @@ final class HaloLayerView: NSView {
         core.fillColor = NSColor.clear.cgColor
         core.strokeColor = ringColorValue.cgColor
         core.lineWidth = baseWidth
-        core.lineCap = .round
+        // In invert mode each overlapping cap would invert twice (and cancel
+        // out), so keep the segments edge-to-edge and drop the translucent
+        // glow that would otherwise muddy the difference blend.
+        core.lineCap = invertEnabled ? .butt : .round
         core.lineJoin = .round
 
         let glow = CAShapeLayer()
@@ -221,7 +250,7 @@ final class HaloLayerView: NSView {
         // stacking into bright "ink dots" at every joint.
         glow.lineCap = .butt
         glow.lineJoin = .round
-        glow.opacity = 0.35
+        glow.opacity = invertEnabled ? 0 : 0.35
 
         let segment = TrailSegment(
             core: core,
@@ -322,7 +351,7 @@ final class HaloLayerView: NSView {
             CATransaction.setDisableActions(true)
             segment.core.opacity = Float(alpha)
             segment.core.lineWidth = width
-            segment.glow.opacity = Float(alpha * 0.4)
+            segment.glow.opacity = invertEnabled ? 0 : Float(alpha * 0.4)
             segment.glow.lineWidth = width * 2.4
             CATransaction.commit()
         }
