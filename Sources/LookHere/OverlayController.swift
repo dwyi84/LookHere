@@ -36,7 +36,7 @@ final class OverlayController {
         color: NSColor? = nil,
         radius: CGFloat? = nil,
         opacity: Double? = nil,
-        lineWidth: CGFloat? = nil,
+        thicknessRatio: Double? = nil,
         ringEnabled: Bool? = nil,
         trailEnabled: Bool? = nil,
         trailDuration: Double? = nil
@@ -44,7 +44,7 @@ final class OverlayController {
         let resolvedColor = color ?? settings.effectiveColor
         let resolvedRadius = radius ?? CGFloat(settings.ringRadius)
         let resolvedOpacity = opacity ?? settings.ringOpacity
-        let resolvedWidth = lineWidth ?? CGFloat(settings.ringLineWidth)
+        let resolvedThickness = thicknessRatio ?? settings.ringThicknessRatio
         let resolvedRing = ringEnabled ?? settings.isEnabled
         let resolvedTrail = trailEnabled ?? settings.trailEnabled
         let resolvedDuration = trailDuration ?? settings.trailDuration
@@ -54,7 +54,7 @@ final class OverlayController {
                 color: resolvedColor,
                 radius: resolvedRadius,
                 opacity: resolvedOpacity,
-                lineWidth: resolvedWidth,
+                thicknessRatio: resolvedThickness,
                 ringEnabled: resolvedRing,
                 trailEnabled: resolvedTrail,
                 trailDuration: resolvedDuration
@@ -95,8 +95,8 @@ final class OverlayController {
             window.haloView.spawnRipple(
                 at: local,
                 color: settings.effectiveColor,
-                lineWidth: CGFloat(settings.ringLineWidth),
-                maxRadius: CGFloat(settings.ringRadius)
+                lineWidth: CGFloat(settings.ringRadius) * CGFloat(settings.ringThicknessRatio),
+                outerRadius: CGFloat(settings.ringRadius)
             )
             break
         }

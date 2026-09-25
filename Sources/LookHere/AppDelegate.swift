@@ -74,9 +74,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.overlayController.updateVisuals(opacity: opacity)
             }
             .store(in: &cancellables)
-        settings.$ringLineWidth
-            .sink { [weak self] lineWidth in
-                self?.overlayController.updateVisuals(lineWidth: CGFloat(lineWidth))
+        settings.$ringThicknessRatio
+            .sink { [weak self] ratio in
+                self?.overlayController.updateVisuals(thicknessRatio: ratio)
             }
             .store(in: &cancellables)
         settings.$trailEnabled

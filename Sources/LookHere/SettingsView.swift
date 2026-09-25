@@ -157,14 +157,14 @@ struct SettingsView: View {
                 colorSwatches
             }
 
-            sliderRow(title: "Radius", value: $settings.ringRadius, range: 7...60, step: 1) {
+            sliderRow(title: "Radius", value: $settings.ringRadius, range: 7...90, step: 1) {
                 "\(Int($0.rounded())) pt"
             }
             sliderRow(title: "Opacity", value: $settings.ringOpacity, range: 0.15...1.0, step: 0.05) {
                 "\(Int(($0 * 100).rounded()))%"
             }
-            sliderRow(title: "Thickness", value: $settings.ringLineWidth, range: 1...90, step: 1) {
-                "\(Int($0.rounded())) pt"
+            sliderRow(title: "Thickness", value: $settings.ringThicknessRatio, range: 0.01...1.0, step: 0.01) {
+                "\(Int(($0 * 100).rounded()))% of radius"
             }
         }
     }

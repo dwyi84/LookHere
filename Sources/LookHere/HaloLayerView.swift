@@ -8,6 +8,7 @@ final class HaloLayerView: NSView {
     private var trailTimer: Timer?
 
     private var radius: CGFloat = 30
+    private var thicknessRatio: Double = 0.10
     private var strokeWidth: CGFloat = 3
     private var ringColorValue: NSColor = .systemOrange
     private var ringEnabled = true
@@ -67,26 +68,33 @@ final class HaloLayerView: NSView {
         color: NSColor,
         radius: CGFloat,
         opacity: Double,
-        lineWidth: CGFloat,
+        thicknessRatio: Double,
         ringEnabled: Bool,
         trailEnabled: Bool,
         trailDuration: Double
     ) {
         self.radius = radius
-        self.strokeWidth = lineWidth
+        self.thicknessRatio = thicknessRatio
         self.ringColorValue = color
         self.ringEnabled = ringEnabled
         self.trailEnabled = trailEnabled
         self.trailDuration = trailDuration
 
+        // `radius` is the OUTER radius. The band thickness is a fraction of it,
+        // which places the stroked path on the band's centreline. This keeps
+        // inner = outer * (1 - ratio) >= 0 for any size.
+        let bandWidth = radius * CGFloat(thicknessRatio)
+        self.strokeWidth = bandWidth
+        let centerlineRadius = radius - bandWidth / 2
+
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         ringLayer.strokeColor = color.withAlphaComponent(CGFloat(opacity)).cgColor
-        ringLayer.lineWidth = lineWidth
+        ringLayer.lineWidth = bandWidth
         if !ringEnabled {
             ringLayer.isHidden = true
         }
-        let side = radius * 2
+        let side = centerlineRadius * 2
         let rect = CGRect(origin: .zero, size: CGSize(width: side, height: side))
         ringLayer.path = CGPath(ellipseIn: rect, transform: nil)
         ringLayer.bounds = rect
@@ -96,7 +104,7 @@ final class HaloLayerView: NSView {
         recolorTrail(with: color)
     }
 
-    func spawnRipple(at point: CGPoint, color: NSColor, lineWidth: CGFloat, maxRadius: CGFloat) {
+    func spawnRipple(at point: CGPoint, color: NSColor, lineWidth: CGFloat, outerRadius: CGFloat) {
         if ripples.count >= 10 {
             ripples.removeFirst().removeFromSuperlayer()
         }
@@ -119,7 +127,7 @@ final class HaloLayerView: NSView {
         layer?.addSublayer(ripple)
         ripples.append(ripple)
 
-        let finalScale = (maxRadius + 8) / startRadius
+        let finalScale = (outerRadius + 8) / startRadius
 
         let scale = CABasicAnimation(keyPath: "transform.scale")
         scale.fromValue = 1.0

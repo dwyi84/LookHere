@@ -23,8 +23,11 @@ final class SettingsStore: ObservableObject {
         didSet { defaults.set(ringOpacity, forKey: Keys.ringOpacity) }
     }
 
-    @Published var ringLineWidth: Double {
-        didSet { defaults.set(ringLineWidth, forKey: Keys.ringLineWidth) }
+    /// Ring band thickness as a fraction of the outer radius (0...1). The
+    /// inner radius is `outerRadius * (1 - ratio)`, so the band can never
+    /// collapse past the centre regardless of size.
+    @Published var ringThicknessRatio: Double {
+        didSet { defaults.set(ringThicknessRatio, forKey: Keys.ringThicknessRatio) }
     }
 
     @Published var hotkeyEnabled: Bool {
@@ -58,9 +61,18 @@ final class SettingsStore: ObservableObject {
 
     init() {
         isEnabled = defaults.object(forKey: Keys.isEnabled) as? Bool ?? true
-        ringRadius = defaults.object(forKey: Keys.ringRadius) as? Double ?? 30
+        let storedRadius = defaults.object(forKey: Keys.ringRadius) as? Double ?? 30
+        ringRadius = storedRadius
         ringOpacity = defaults.object(forKey: Keys.ringOpacity) as? Double ?? 0.85
-        ringLineWidth = defaults.object(forKey: Keys.ringLineWidth) as? Double ?? 3
+        if let storedRatio = defaults.object(forKey: Keys.ringThicknessRatio) as? Double {
+            ringThicknessRatio = storedRatio
+        } else if let legacyWidth = defaults.object(forKey: Keys.ringLineWidth) as? Double,
+                  storedRadius > 0 {
+            // Migrate the old absolute thickness (pt) into a ratio of the radius.
+            ringThicknessRatio = min(max(legacyWidth / storedRadius, 0.01), 1.0)
+        } else {
+            ringThicknessRatio = 0.10
+        }
         hotkeyEnabled = defaults.object(forKey: Keys.hotkeyEnabled) as? Bool ?? true
         let storedCode = defaults.integer(forKey: Keys.hotkeyKeyCode)
         hotkeyKeyCode = UInt32(storedCode == 0 ? 37 : storedCode)
@@ -90,7 +102,7 @@ final class SettingsStore: ObservableObject {
         ringColor = NSColor.systemOrange
         ringRadius = 30
         ringOpacity = 0.85
-        ringLineWidth = 3
+        ringThicknessRatio = 0.10
         hotkeyEnabled = true
         hotkeyKeyCode = 37
         hotkeyCarbonModifiers = UInt32(cmdKey | shiftKey)
@@ -168,6 +180,7 @@ final class SettingsStore: ObservableObject {
         static let alpha = "ringColor.alpha"
         static let ringRadius = "ringRadius"
         static let ringOpacity = "ringOpacity"
+        static let ringThicknessRatio = "ringThicknessRatio"
         static let ringLineWidth = "ringLineWidth"
         static let hotkeyEnabled = "hotkeyEnabled"
         static let hotkeyKeyCode = "hotkeyKeyCode"
