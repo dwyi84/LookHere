@@ -30,19 +30,23 @@ A featherweight **macOS menu bar utility** that draws a smooth, zero-lag **halo 
 
 - macOS 26 (Tahoe) or later
 - Apple Silicon (arm64)
-- Xcode Command Line Tools (for the Swift toolchain)
+
+Xcode Command Line Tools are only needed if you build from source (see [Development](#development)).
 
 ## Installation
 
-Clone the repository and build:
+1. Download the latest `LookHere-vX.Y.Z-macos-arm64.zip` from [GitHub Releases](https://github.com/dwyi84/LookHere/releases/latest).
+2. Unzip it and drag **LookHere.app** into your **Applications** folder.
+3. Open **LookHere** from Applications.
 
-```bash
-git clone https://github.com/dwyi84/LookHere.git
-cd LookHere
-./build.sh
-```
+The build is not notarized, so macOS may warn on first launch that the developer
+can't be verified. To open it anyway, **right-click (or Control-click)**
+**LookHere.app** and choose **Open**, then confirm. You only need to do this once.
 
-`build.sh` compiles the app with Swift Package Manager, assembles `LookHere.app` (with an `LSUIElement` bundle so it lives quietly in the menu bar), generates the app icon, ad-hoc signs it, and launches it.
+`LookHere.app` ships with an `LSUIElement` bundle so it lives quietly in the menu
+bar — no Dock icon, no window.
+
+To build from source instead, see [Development](#development).
 
 ## First Run
 
