@@ -38,9 +38,7 @@ Xcode Command Line Tools are only needed if you build from source (see [Developm
 ### Homebrew (recommended)
 
 ```bash
-brew tap dwyi84/tap
-brew trust dwyi84/tap
-brew install --cask lookhere
+brew install --cask dwyi84/tap/lookhere
 ```
 
 This installs **LookHere.app** to `~/Applications`. Because the app is signed with
