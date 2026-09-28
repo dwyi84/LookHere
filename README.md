@@ -35,13 +35,27 @@ Xcode Command Line Tools are only needed if you build from source (see [Developm
 
 ## Installation
 
-1. Download the latest `LookHere-vX.Y.Z-macos-arm64.zip` from [GitHub Releases](https://github.com/dwyi84/LookHere/releases/latest).
-2. Unzip it and drag **LookHere.app** into your **Applications** folder.
-3. Open **LookHere** from Applications.
+### Homebrew (recommended)
 
-The build is not notarized, so macOS may warn on first launch that the developer
-can't be verified. To open it anyway, **right-click (or Control-click)**
-**LookHere.app** and choose **Open**, then confirm. You only need to do this once.
+```bash
+brew tap dwyi84/tap
+brew trust dwyi84/tap
+brew install --cask lookhere
+```
+
+This installs **LookHere.app** to `~/Applications`. Because the app is signed with
+a local certificate rather than notarized by Apple, Gatekeeper blocks the first
+launch — right-click the app and choose **Open**, or clear the quarantine flag:
+
+```bash
+xattr -dr com.apple.quarantine "$HOME/Applications/LookHere.app"
+```
+
+### Manual download
+
+1. Open the [latest release](https://github.com/dwyi84/LookHere/releases/latest) and download the `LookHere-vX.Y.Z-macos-arm64.zip` asset.
+2. Unzip it and drag **LookHere.app** into your **Applications** folder.
+3. On first launch macOS Gatekeeper may warn for the same reason as above. **Right-click the app → Open**, then confirm **Open**.
 
 `LookHere.app` ships with an `LSUIElement` bundle so it lives quietly in the menu
 bar — no Dock icon, no window.
@@ -104,6 +118,12 @@ Sources/LookHere/
 ├── AccessibilityHelper.swift# Accessibility permission helpers
 └── SettingsView.swift       # SwiftUI settings panel
 ```
+
+### Releasing
+
+1. Bump `UpdateChecker.currentVersion` and `Resources/Info.plist` (`CFBundleShortVersionString` / `CFBundleVersion`).
+2. `./build.sh`, then zip the app as `dist/LookHere-v<version>-macos-arm64.zip` and publish it on GitHub Releases.
+3. Point the Homebrew tap at the new build: `Scripts/update_cask.sh <version>`, then commit/push [dwyi84/homebrew-tap](https://github.com/dwyi84/homebrew-tap).
 
 ## Privacy
 
